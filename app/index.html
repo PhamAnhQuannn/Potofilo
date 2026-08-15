@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Phạm Anh Quân — Portfolio</title>
+<meta name="description" content="Portfolio cá nhân Phạm Anh Quân — sinh viên sắp tốt nghiệp, founder nền tảng lập kế hoạch du lịch nội địa bằng AI. Dự án, kỹ năng, liên hệ." />
+<meta name="color-scheme" content="dark" />
+<meta property="og:title" content="Phạm Anh Quân — Portfolio" />
+<meta property="og:description" content="Sinh viên sắp tốt nghiệp · Founder nền tảng du lịch AI." />
+<meta property="og:type" content="website" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=Unbounded:wght@600;700;800&display=swap" />
+<link rel="stylesheet" href="./styles/main.css" />
+</head>
+<body>
+<a class="skip-link" href="#bento">Bỏ qua tới nội dung</a>
+
+<!-- Bụi tàn dư (Canvas 2D), sau nội dung -->
+<canvas id="dust-layer" aria-hidden="true"></canvas>
+
+<!-- Sân khấu intro: canvas WebGL full-screen + lời chào + nút bỏ qua + flash -->
+<div id="cosmic-stage" aria-hidden="true">
+  <div id="cosmic-greet" aria-hidden="true"></div>
+  <button id="skip-intro" type="button">Bỏ qua</button>
+  <div id="ci-flash-overlay"></div>
+</div>
+
+<!-- ================= BENTO GRID (7 ô, 1 viewport) ================= -->
+<main id="bento" class="bento" aria-label="Portfolio">
+
+  <!-- Identity -->
+  <article class="tile tile--identity" data-tile="identity" style="--accent: var(--hot-1)" tabindex="0" role="button" aria-label="Giới thiệu — mở chi tiết">
+    <span class="tile__label">Xin chào</span>
+    <div class="tile__idrow">
+      <img class="tile__avatar" src="./assets/avatar.jpg" alt="Ảnh chân dung Phạm Anh Quân" width="56" height="56" />
+      <div>
+        <h1 class="tile__name">Phạm Anh Quân</h1>
+        <p class="tile__body">Sinh viên [ngành] · Founder [công ty du lịch]</p>
+      </div>
+    </div>
+    <div class="tile__detail" hidden>
+      <p>[Tagline 1 câu — định vị bản thân.]</p>
+      <p>Sinh viên [ngành] sắp tốt nghiệp [trường]. Founder & Operator [công ty du lịch].</p>
+    </div>
+  </article>
+
+  <!-- Featured (ô lớn nhất) -->
+  <article class="tile tile--featured" data-tile="featured" style="--accent: var(--hot-2)" tabindex="0" role="button" aria-label="Dự án nổi bật — mở chi tiết">
+    <span class="tile__label">Nổi bật · Đang live</span>
+    <div class="tile__media">[Screenshot — 1600×800]</div>
+    <h2 class="tile__title">[Tên trang du lịch]</h2>
+    <p class="tile__body">Nền tảng lập kế hoạch du lịch nội địa bằng AI — Đà Lạt, Nha Trang, Đà Nẵng.</p>
+    <div class="tile__stats">
+      <div><span>[số]</span><small>Người dùng</small></div>
+      <div><span>[số]</span><small>Lịch trình</small></div>
+    </div>
+    <a class="btn btn--primary tile__cta" href="[URL trang live]" target="_blank" rel="noopener" onclick="event.stopPropagation()">Xem live →</a>
+    <div class="tile__detail" hidden>
+      <p><strong>Vai trò:</strong> Tự thiết kế, phát triển và vận hành toàn bộ.</p>
+      <p class="detail-note">Nguyên tắc data integrity: không bịa địa điểm/giá/giờ. Dữ liệu thiếu hiển thị "Chưa xác minh".</p>
+      <ul class="tags">
+        <li class="tag tag--cool">[Tech 1]</li><li class="tag tag--cool">[Tech 2]</li>
+        <li class="tag tag--cool">[Tech 3]</li><li class="tag tag--cool">[Tech 4]</li>
+      </ul>
+    </div>
+  </article>
+
+  <!-- Education -->
+  <article class="tile tile--education" data-tile="education" style="--accent: var(--cool-1)" tabindex="0" role="button" aria-label="Học vấn — mở chi tiết">
+    <span class="tile__label">Education</span>
+    <h2 class="tile__title">[Trường]</h2>
+    <p class="tile__body">[Ngành] · Tốt nghiệp 2026 · GPA 3.75</p>
+    <div class="tile__detail" hidden>
+      <p><strong>Học bổng / giải thưởng:</strong> [nếu có]</p>
+      <p><strong>Môn liên quan:</strong> [vài môn học]</p>
+    </div>
+  </article>
+
+  <!-- Experience -->
+  <article class="tile tile--experience" data-tile="experience" style="--accent: var(--cool-2)" tabindex="0" role="button" aria-label="Kinh nghiệm — mở chi tiết">
+    <span class="tile__label">Experience</span>
+    <h2 class="tile__title">Founder — [công ty du lịch]</h2>
+    <p class="tile__body">Đại lý cấp 2 Vietnam Airlines &amp; VietJet Air.</p>
+    <div class="tile__detail" hidden>
+      <p class="tile__body">[Thời gian]</p>
+      <ul>
+        <li>Tự vận hành toàn bộ nền tảng + kinh doanh.</li>
+        <li>Đại lý cấp 2 Vietnam Airlines &amp; VietJet Air.</li>
+        <li>Xử lý khách hàng trực tiếp: tư vấn, đặt vé, chăm sóc.</li>
+      </ul>
+      <p>[Kinh nghiệm khác — nếu có]</p>
+    </div>
+  </article>
+
+  <!-- Projects -->
+  <article class="tile tile--projects" data-tile="projects" style="--accent: var(--cool-3)" tabindex="0" role="button" aria-label="Các dự án khác — mở chi tiết">
+    <span class="tile__label">Projects</span>
+    <ul class="tile__list">
+      <li>[Dự án 1] — [mô tả 1 dòng] <a href="[link]" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗</a></li>
+      <li>[Dự án 2] — [mô tả 1 dòng] <a href="[link]" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗</a></li>
+      <li>[Dự án 3] — [mô tả 1 dòng] <a href="[link]" target="_blank" rel="noopener" onclick="event.stopPropagation()">↗</a></li>
+    </ul>
+    <div class="tile__detail" hidden>
+      <p>[Chi tiết từng dự án: stack, GitHub, demo.]</p>
+    </div>
+  </article>
+
+  <!-- Skills -->
+  <article class="tile tile--skills" data-tile="skills" style="--accent: var(--cool-4)" tabindex="0" role="button" aria-label="Kỹ năng — mở chi tiết">
+    <span class="tile__label">Skills</span>
+    <ul class="tags">
+      <li class="tag tag--cool">[kỹ năng]</li><li class="tag tag--cool">[kỹ năng]</li>
+      <li class="tag tag--cool">[kỹ năng]</li><li class="tag tag--cool">[kỹ năng]</li>
+    </ul>
+    <div class="tile__detail" hidden>
+      <p><strong>Frontend:</strong> [..]</p><p><strong>Backend:</strong> [..]</p>
+      <p><strong>Tools:</strong> [..]</p><p><strong>Khác:</strong> [..]</p>
+    </div>
+  </article>
+
+  <!-- Contact -->
+  <article class="tile tile--contact" data-tile="contact" style="--accent: var(--cool-1)" tabindex="0" role="button" aria-label="Liên hệ — mở chi tiết">
+    <span class="tile__label">Contact</span>
+    <ul class="tile__links">
+      <li><a href="mailto:phamanhquan4068@gmail.com" onclick="event.stopPropagation()">Email</a></li>
+      <li><a href="[GitHub URL]" target="_blank" rel="noopener" onclick="event.stopPropagation()">GitHub</a></li>
+      <li><a href="[LinkedIn/Facebook URL]" target="_blank" rel="noopener" onclick="event.stopPropagation()">LinkedIn</a></li>
+    </ul>
+    <a class="btn btn--primary tile__cta" href="[CV PDF URL]" target="_blank" rel="noopener" onclick="event.stopPropagation()">Tải CV</a>
+    <div class="tile__detail" hidden>
+      <p>Email: <a href="mailto:phamanhquan4068@gmail.com">phamanhquan4068@gmail.com</a></p>
+      <p>GitHub: [GitHub URL] · LinkedIn/Facebook: [URL]</p>
+    </div>
+  </article>
+
+</main>
+
+<!-- Overlay expand (FLIP) -->
+<div id="tile-overlay" class="tile-overlay" hidden role="dialog" aria-modal="true" aria-label="Chi tiết">
+  <button class="tile-overlay__close" type="button" aria-label="Đóng">×</button>
+  <div class="tile-overlay__panel" id="tile-overlay-panel"></div>
+</div>
+
+<script src="./site.js" defer></script>
+<!-- Giai đoạn 3 (redesign): bụi + intro khai sinh + expand -->
+<script src="./dust-layer.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="./hero-sphere.js" defer></script>
+<script src="./bento.js" defer></script>
+</body>
+</html>

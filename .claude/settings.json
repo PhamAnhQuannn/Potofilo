@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Edit(/.claude/skills/update-brain/**)",
+      "Bash(mkdir -p .claude/hooks app content/projects public scripts docs)",
+      "Bash(touch __TRACKED_VAR__/.gitkeep)",
+      "Bash(node --check config.js)",
+      "Bash(node -e ' *)",
+      "Bash(pkill -f \"http.server 8123\")",
+      "Bash(python -m http.server 4001)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:4001/CosmicIntro.html)",
+      "Bash(curl -s http://localhost:4001/)",
+      "Bash(netstat -ano)",
+      "Bash(netsh int *)",
+      "Bash(powershell -Command \"Get-Process -Id 4592 | Select-Object Id,ProcessName,Path | Format-List\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:4001/)",
+      "Bash(node --check /d/Potofilo/app/hero-sphere.js)",
+      "Bash(curl -s http://localhost:4001/hero-sphere.js)",
+      "Bash(sed -n '360,363p')",
+      "Bash(curl -sI http://localhost:4001/hero-sphere.js)",
+      "Bash(curl -s http://localhost:4001/styles/main.css)",
+      "Bash(gh --version)",
+      "Bash(gh auth *)"
+    ]
+  }
+}

@@ -1,0 +1,163 @@
+/* ============================================================
+   Potofilo — main.css  (redesign: bento 1 viewport)
+   Design token cố định. KHÔNG đen thuần #000000. Tỷ lệ 70-20-10.
+   ============================================================ */
+:root {
+  --bg: #050510; --bg-2: #0A0A1A; --bg-3: #0D0B21; --border: #141031;
+  --text: #EDEAF6; --text-2: #B9B4D0; --text-3: #8B8BA8;
+  --hot-1: #FFC864; --hot-2: #FF8C42;
+  --cool-1: #4ECDC4; --cool-2: #3A7BD5; --cool-3: #E84A8A; --cool-4: #7B2FBF;
+  /* Màu quả cầu hạt (intro) — JS đọc, không hardcode màu lần 2 */
+  --sphere-core: #FFFFFF; --sphere-cream: #FFF4D6; --sphere-plasma: #FF5E3A;
+  --star-hot: #CDE3FF; --star-cool: #FFE9C4;
+  --font-display: "Unbounded", "Be Vietnam Pro", system-ui, sans-serif;
+  --font-body: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--text);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+img, video, canvas { max-width: 100%; display: block; }
+a { color: var(--hot-1); text-decoration: none; }
+a:hover { color: var(--hot-2); }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; line-height: 1.15; margin: 0; }
+:focus-visible { outline: 3px solid var(--hot-1); outline-offset: 2px; border-radius: 6px; }
+
+.skip-link { position: absolute; left: 12px; top: -60px; z-index: 10005;
+  background: var(--hot-1); color: #050510; padding: 10px 16px; border-radius: 8px; font-weight: 600; transition: top 0.2s; }
+.skip-link:focus { top: 12px; }
+
+/* ---------- Nút / tag (dùng chung) ---------- */
+.btn { display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px; border-radius: 999px;
+  font-weight: 600; font-size: 14px; cursor: pointer; border: 1px solid transparent;
+  transition: transform 0.15s, box-shadow 0.2s; }
+.btn--primary { background: var(--hot-1); color: #050510; box-shadow: 0 6px 20px rgba(255,200,100,0.22); }
+.btn--primary:hover { color: #050510; transform: translateY(-2px); box-shadow: 0 10px 28px rgba(255,200,100,0.36); }
+.tags { display: flex; flex-wrap: wrap; gap: 8px; list-style: none; margin: 10px 0 0; padding: 0; }
+.tag { font-size: 13px; padding: 4px 11px; border-radius: 999px; color: var(--text-2);
+  border: 1px solid var(--border); background: var(--bg); }
+.tag--cool { color: var(--cool-1); border-color: rgba(78,205,196,0.3); }
+
+/* ---------- Dust layer (Canvas 2D, sau nội dung) ---------- */
+#dust-layer { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+
+/* ============================================================
+   BENTO GRID — 1 viewport (desktop ≥1024px)
+   ============================================================ */
+.bento {
+  position: relative; z-index: 1;
+  max-width: 1200px; margin: 0 auto; padding: 24px;
+  height: 100vh; box-sizing: border-box;
+  display: grid; gap: 14px;
+  grid-template-columns: repeat(4, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+  grid-template-areas:
+    "identity identity featured featured"
+    "education experience featured featured"
+    "projects projects skills contact";
+}
+.tile--identity   { grid-area: identity; }
+.tile--featured   { grid-area: featured; }
+.tile--education  { grid-area: education; }
+.tile--experience { grid-area: experience; }
+.tile--projects   { grid-area: projects; }
+.tile--skills     { grid-area: skills; }
+.tile--contact    { grid-area: contact; }
+
+/* ---------- Ô (tile) ---------- */
+.tile {
+  position: relative; min-height: 0; overflow: hidden; cursor: pointer;
+  background: var(--bg-2); border: 1px solid var(--border); border-radius: 16px; padding: 20px;
+  display: flex; flex-direction: column; gap: 6px;
+  transition: border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
+}
+.tile:hover { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset, 0 12px 34px rgba(5,5,16,0.5); }
+.tile:focus-visible { outline: 3px solid var(--accent); }
+.tile__label { font-size: 11px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--accent); }
+.tile__title { font-size: clamp(18px, 1.4vw, 20px); margin: 0; }
+.tile__name {
+  font-size: clamp(26px, 3vw, 40px); margin: 0; font-family: var(--font-display); font-weight: 700; line-height: 1.1;
+  background: linear-gradient(180deg, #FFFFFF, var(--hot-1)); -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.tile__body { font-size: 14px; line-height: 1.55; color: var(--text-2); margin: 0; }
+.tile__idrow { display: flex; align-items: center; gap: 14px; }
+.tile__avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; border: 2px solid var(--border); background: var(--bg-3); flex: none; }
+.tile__media { flex: 1 1 auto; min-height: 60px; border-radius: 10px; border: 1px solid var(--border);
+  background: var(--bg) radial-gradient(circle at 30% 30%, rgba(255,140,66,0.14), transparent 60%);
+  display: grid; place-items: center; color: var(--text-3); font-size: 12px; }
+.tile__stats { display: flex; gap: 26px; margin-top: auto; }
+.tile__stats span { display: block; font-family: var(--font-display); font-size: 24px; color: var(--accent); }
+.tile__stats small { color: var(--text-3); font-size: 12px; }
+.tile__cta { align-self: flex-start; margin-top: 8px; }
+.tile__list { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 14px; color: var(--text-2); }
+.tile__list a { margin-left: 4px; }
+.tile__links { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 14px; font-size: 14px; }
+.tile__links a { color: var(--text-2); }
+.tile__links a:hover { color: var(--accent); }
+.tile__detail { display: none; }
+
+/* ---------- Overlay expand (FLIP dùng JS) ---------- */
+.tile-overlay { position: fixed; inset: 0; z-index: 10001; display: grid; place-items: center;
+  background: rgba(5,5,16,0.6); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); }
+.tile-overlay[hidden] { display: none; }
+.tile-overlay__panel {
+  width: min(80vw, 820px); max-height: 80vh; overflow: auto;
+  background: var(--bg-3); border: 1px solid var(--border); border-radius: 20px; padding: 32px;
+  box-shadow: 0 40px 120px rgba(5,5,16,0.7);
+}
+.tile-overlay__panel h2 { font-size: clamp(24px, 3vw, 28px); margin: 0 0 6px; }
+.tile-overlay__panel .tile__label { display: inline-block; margin-bottom: 14px; }
+.tile-overlay__panel p, .tile-overlay__panel li { font-size: 15px; line-height: 1.6; color: var(--text-2); }
+.tile-overlay__panel .detail-note { border-left: 3px solid var(--cool-4); padding-left: 12px; }
+.tile-overlay__close { position: fixed; top: 18px; right: 22px; z-index: 10002;
+  width: 42px; height: 42px; border-radius: 50%; font-size: 22px; cursor: pointer;
+  background: var(--bg-2); color: var(--text); border: 1px solid var(--border); }
+.tile-overlay__close:hover { border-color: var(--hot-1); }
+
+/* ============================================================
+   Sân khấu intro (canvas full-screen khai sinh trang)
+   ============================================================ */
+#cosmic-stage { position: fixed; inset: 0; z-index: 9998; pointer-events: none; display: none; }
+body.cosmic-intro-running #cosmic-stage { display: block; }
+#cosmic-stage canvas { position: absolute; inset: 0; width: 100vw; height: 100vh; }
+/* Lời chào intro "HELLO → I'M QUAN" (thay dòng tên mờ cũ) */
+#cosmic-greet { position: absolute; left: 50%; top: 50%; z-index: 2;
+  transform: translateX(-50%); white-space: nowrap; pointer-events: none;
+  opacity: 1; transition: opacity 0.12s ease;
+  font-family: var(--font-body); font-weight: 300; font-size: 16px;
+  letter-spacing: 0.35em; text-transform: uppercase; color: #FFF4D6;
+  text-shadow: 0 0 24px rgba(255,200,100,0.35); }
+#cosmic-greet.cg-swapout { opacity: 0; }
+#cosmic-greet .cg-char { display: inline-block; opacity: 0;
+  transform: translateY(6px); will-change: transform, opacity, filter; }
+#cosmic-greet .cg-char.cg-in { opacity: 0.85; transform: translateY(0);
+  transition: opacity 0.3s ease, transform 0.3s ease; }
+#ci-flash-overlay { position: absolute; inset: 0; background: #FFFFFF; opacity: 0; }
+#skip-intro { position: fixed; top: 18px; right: 20px; z-index: 9999; pointer-events: auto;
+  background: rgba(255,255,255,0.06); color: var(--text-2); border: 1px solid var(--border);
+  padding: 6px 14px; border-radius: 999px; font-size: 12px; letter-spacing: 0.06em; cursor: pointer; }
+#skip-intro:hover { background: rgba(255,255,255,0.14); color: var(--text); }
+#cosmic-stage.cosmic-stage-out { opacity: 0; transition: opacity 0.6s ease; }
+
+/* Trong intro: các ô ẩn (chỉ khi JS chạy intro — tắt JS vẫn hiện đủ) */
+body.cosmic-intro-running #bento .tile { opacity: 0; }
+#bento .tile.cosmic-crystallized { opacity: 1 !important; transition: opacity 0.3s ease; }
+
+/* ============================================================
+   Mobile: bento sập 1 cột scroll dọc
+   ============================================================ */
+@media (max-width: 1023px) {
+  .bento { height: auto; min-height: 100vh; grid-template-columns: 1fr; grid-template-rows: none; grid-template-areas: none; }
+  .tile { grid-area: auto !important; }
+  .tile-overlay__panel { width: min(92vw, 640px); padding: 22px; }
+}
+@media (max-width: 380px) { body { font-size: 15px; } }
+
+/* Reduced-motion: không transition rối mắt */
+@media (prefers-reduced-motion: reduce) {
+  * { scroll-behavior: auto !important; }
+  #bento .tile { transition: none; }
+}

@@ -1,0 +1,22 @@
+# deps
+node_modules/
+
+# build
+dist/
+.vite/
+.next/
+out/
+build/
+
+# env / secrets
+.env
+.env.*
+!.env.example
+
+# claude local
+.claude/settings.local.json
+
+# os / editor
+.DS_Store
+Thumbs.db
+*.log

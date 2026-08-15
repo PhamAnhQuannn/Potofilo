@@ -1,0 +1,42 @@
+/* Cosmic Intro — styles (module dùng chung cho standalone + app entry) */
+#cosmic-intro { position: fixed; inset: 0; z-index: 9999; background:
+    radial-gradient(ellipse at 50% 45%, #141031 0%, #0D0B21 35%, #0A0A1A 65%, #050510 100%);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+#cosmic-intro canvas { display: block; }
+
+/* Vignette (mép tối) */
+#ci-vignette { position: absolute; inset: 0; pointer-events: none;
+    background: radial-gradient(ellipse at 50% 50%, rgba(5,5,16,0) 55%, rgba(5,5,16,0.55) 100%); }
+
+/* Flash vụ nổ */
+#ci-flash { position: absolute; inset: 0; background: #FFFFFF; opacity: 0; pointer-events: none; }
+
+/* Hint text */
+#ci-hint { position: absolute; left: 0; right: 0; bottom: 8%; text-align: center;
+    color: #CDE3FF; letter-spacing: 0.35em; font-size: 13px; text-transform: uppercase;
+    opacity: 0; animation: ci-pulse 2.2s ease-in-out infinite; pointer-events: none; }
+@keyframes ci-pulse { 0%,100% { opacity: 0.25; } 50% { opacity: 0.85; } }
+
+/* Nút bỏ qua */
+#ci-skip { position: absolute; top: 18px; right: 20px; z-index: 5;
+    background: rgba(255,255,255,0.06); color: #CDE3FF; border: 1px solid rgba(205,227,255,0.25);
+    padding: 6px 14px; border-radius: 999px; font-size: 12px; letter-spacing: 0.08em;
+    cursor: pointer; backdrop-filter: blur(4px); transition: background 0.2s, opacity 0.4s; }
+#ci-skip:hover { background: rgba(255,255,255,0.14); }
+
+/* UI màn DONE */
+#ci-ui { position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; text-align: center; color: #fff;
+    opacity: 0; pointer-events: none; transition: opacity var(--fade,2.2s) ease; padding: 24px; }
+#ci-ui.show { opacity: 1; pointer-events: auto; }
+#ci-eyebrow { color: #FFC864; letter-spacing: 0.4em; font-size: 12px; text-transform: uppercase; margin-bottom: 18px; }
+#ci-title { font-size: clamp(32px, 7vw, 76px); font-weight: 700; margin: 0;
+    background: linear-gradient(180deg, #FFFFFF, #FFF4D6 55%, #FFC864);
+    -webkit-background-clip: text; background-clip: text; color: transparent; }
+#ci-tagline { margin: 16px 0 30px; color: #B9C2E0; font-size: clamp(14px, 2.2vw, 19px); max-width: 620px; }
+#ci-cta { background: linear-gradient(135deg, #FF8C42, #E84A8A); color: #fff; border: none;
+    padding: 14px 34px; border-radius: 999px; font-size: 15px; letter-spacing: 0.05em;
+    cursor: pointer; box-shadow: 0 8px 30px rgba(232,74,138,0.35); transition: transform 0.15s, box-shadow 0.2s; }
+#ci-cta:hover { transform: translateY(-2px); box-shadow: 0 12px 40px rgba(232,74,138,0.5); }
+
+@media (prefers-reduced-motion: reduce) { #ci-hint { animation: none; opacity: 0.6; } }
