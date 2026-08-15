@@ -41,7 +41,9 @@
   function CosmicSphere() {
     this.phase = 'void'; this._raf = 0; this._running = false; this._last = 0;
     this.time = 0; this.phaseTime = 0; this._spinY = 0; this.callbacks = {};
-    this._disposed = false; this._v = new THREE.Vector3(); this._revealed = {};
+    this._disposed = false; this._v = new THREE.Vector3(); this._m = new THREE.Matrix4();
+    this._ax = new THREE.Vector3(); this._revealed = {};
+    this.planets = null; this.pGlow = null; this.pRing = null; this.pConv = 0;
   }
 
   CosmicSphere.prototype.init = function (stageEl, options) {
@@ -62,6 +64,7 @@
 
     this.sprite = softSprite();
     this._buildParticles(); this._buildStars(); this._buildGlow(); this._buildRings();
+    this.camera.updateMatrixWorld(true); // để projectToScreen an toàn từ frame 0 (tránh NaN)
     return this;
   };
 
@@ -185,7 +188,9 @@
   CosmicSphere.prototype.setPhase = function (name) {
     this.phase = name; this.phaseTime = 0;
     if (name === 'explode') this._enterExplode();
-    if (name === 'crystallize') { this.cStart.set(this.positions); if (this.callbacks.onCrystallize) this.callbacks.onCrystallize(this.getDustHandover()); }
+    if (name === 'planets') this._enterPlanets();
+    if (name === 'cascade') this._enterCascade();
+    if (name === 'crystallize') { this.cStart.set(this.positions); this._cColStart = this._cColStart || new Float32Array(this.count * 3); this._cColStart.set(this.colors); this._dustHanded = false; }
     if (name === 'alive') this._enterAlive();
     if (this.callbacks.onPhase) this.callbacks.onPhase(name);
   };
@@ -218,9 +223,165 @@
     if (this.callbacks.onFlash) this.callbacks.onFlash();
   };
 
+  // ---------------- PLANETS (hành tinh sống) ----------------
+  CosmicSphere.prototype._buildPlanetFX = function () {
+    if (this.pGlow) { for (var g = 0; g < 7; g++) { this.pGlow[g].visible = true; this.pRing[g].visible = false; } return; }
+    this.pGlow = []; this.pRing = [];
+    for (var k = 0; k < 7; k++) {
+      var col = this.tileColors[k];
+      var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.sprite, color: col.clone(),
+        transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0 }));
+      glow.scale.set(1, 1, 1); this.scene.add(glow); this.pGlow.push(glow);
+      var rmesh = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.0, 48),
+        new THREE.MeshBasicMaterial({ color: col.clone(), transparent: true, opacity: 0,
+          blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
+      rmesh.visible = false; this.scene.add(rmesh); this.pRing.push(rmesh);
+    }
+  };
+
+  CosmicSphere.prototype._enterPlanets = function () {
+    var N = this.count, pos = this.positions, d = this.baseDir, br = this.baseR, R = this.R;
+    var radii = [0.26, 0.34, 0.20, 0.20, 0.26, 0.20, 0.20];
+    var P = [];
+    for (var k = 0; k < 7; k++) {
+      var el = document.querySelector('.tile[data-tile="' + TILE_KEYS[k] + '"]');
+      var c = { x: 0, y: 0 };
+      if (el) { var r = el.getBoundingClientRect(); c = this.screenToWorldZ0(r.left + r.width / 2, r.top + r.height / 2); }
+      var u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, s = Math.sqrt(1 - u * u);
+      P.push({
+        cx: c.x * 0.82, cy: c.y * 0.82, r: radii[k],           // kéo 18% về tâm màn hình
+        ax: [Math.cos(th) * s, u, Math.sin(th) * s],           // trục quay ngẫu nhiên
+        spin: 0.6 + Math.random() * 0.6, ang: Math.random() * Math.PI * 2,
+        oax: 0.06 * (0.5 + Math.random() * 0.5), oay: 0.06 * (0.5 + Math.random() * 0.5),
+        ow: (2 * Math.PI) / (3 + Math.random() * 2), oph: Math.random() * Math.PI * 2, oph2: Math.random() * Math.PI * 2,
+        bw: (2 * Math.PI) / (2.5 + Math.random() * 2), bph: Math.random() * Math.PI * 2, breath: 1,
+        curCx: c.x * 0.82, curCy: c.y * 0.82, broken: false, breakAt: k * 0.18
+      });
+    }
+    this.planets = P; this.pConv = 0;
+    this.pStart = this.pStart || new Float32Array(N * 3);
+    this.pLocal = this.pLocal || new Float32Array(N * 3);
+    this.pStart.set(pos);
+    for (var i = 0; i < N; i++) {
+      var ti = this.tileIdx[i]; if (ti === -1) continue;
+      var frac = br[i] / R, pr = P[ti].r;
+      this.pLocal[i * 3] = d[i * 3] * frac * pr; this.pLocal[i * 3 + 1] = d[i * 3 + 1] * frac * pr; this.pLocal[i * 3 + 2] = d[i * 3 + 2] * frac * pr;
+    }
+    this._buildPlanetFX();
+    this.ring1.visible = this.ring2.visible = false; this.coreGlow.visible = false;
+  };
+
+  CosmicSphere.prototype._updatePlanetMatrix = function (p, dt) {
+    p.ang += p.spin * dt;
+    this._ax.set(p.ax[0], p.ax[1], p.ax[2]);
+    this._m.makeRotationAxis(this._ax, p.ang);
+    return this._m;
+  };
+
+  CosmicSphere.prototype._planets = function (dt) {
+    var t = this.phaseTime, N = this.count, pos = this.positions, col = this.colors, bc = this.baseColor;
+    var P = this.planets, convDur = Math.max(0.3, this._dur.planets * 0.35);
+    this.pConv = Math.min(this.pConv + dt / convDur, 1);
+    var conv = 1 - Math.pow(1 - this.pConv, 3);
+    var mats = [], k;
+    for (k = 0; k < 7; k++) {
+      var p = P[k];
+      p.curCx = p.cx + p.oax * Math.sin(p.ow * t + p.oph);
+      p.curCy = p.cy + p.oay * Math.cos(p.ow * t + p.oph2);
+      p.breath = 1 + 0.03 * Math.sin(p.bw * t + p.bph);
+      mats.push(this._updatePlanetMatrix(p, dt).clone());
+    }
+    var pl = this.pLocal, ps = this.pStart, v = this._v, vel = this.vel;
+    for (var i = 0; i < N; i++) {
+      var ti = this.tileIdx[i];
+      if (ti === -1) {
+        pos[i * 3] += vel[i * 3] * dt; pos[i * 3 + 1] += vel[i * 3 + 1] * dt; pos[i * 3 + 2] += vel[i * 3 + 2] * dt;
+        var dg = Math.pow(0.92, dt * 60); vel[i * 3] *= dg; vel[i * 3 + 1] *= dg; vel[i * 3 + 2] *= dg;
+        continue;
+      }
+      var pp = P[ti];
+      v.set(pl[i * 3], pl[i * 3 + 1], pl[i * 3 + 2]).applyMatrix4(mats[ti]);
+      var lx = pp.curCx + v.x * pp.breath, ly = pp.curCy + v.y * pp.breath, lz = v.z * pp.breath;
+      pos[i * 3]     = ps[i * 3]     + (lx - ps[i * 3])     * conv;
+      pos[i * 3 + 1] = ps[i * 3 + 1] + (ly - ps[i * 3 + 1]) * conv;
+      pos[i * 3 + 2] = ps[i * 3 + 2] + (lz - ps[i * 3 + 2]) * conv;
+      var pc = this.tileColors[ti];
+      col[i * 3] = bc[i * 3] + (pc.r - bc[i * 3]) * conv; col[i * 3 + 1] = bc[i * 3 + 1] + (pc.g - bc[i * 3 + 1]) * conv; col[i * 3 + 2] = bc[i * 3 + 2] + (pc.b - bc[i * 3 + 2]) * conv;
+    }
+    this.geometry.attributes.position.needsUpdate = true;
+    this.geometry.attributes.color.needsUpdate = true;
+    for (k = 0; k < 7; k++) { var gp = P[k], gl = this.pGlow[k]; gl.position.set(gp.curCx, gp.curCy, 0); var sc = gp.r * 4 * gp.breath; gl.scale.set(sc, sc, 1); gl.material.opacity = 0.25 * conv; }
+  };
+
+  // ---------------- CASCADE (nổ dây chuyền) ----------------
+  CosmicSphere.prototype._enterCascade = function () {
+    var P = this.planets, st = 0.18 * (this.isMobile ? 0.72 : 1);
+    for (var k = 0; k < 7; k++) { P[k].broken = false; P[k].breakAt = k * st; P[k].ringT = undefined; P[k].flareT = undefined; }
+  };
+
+  CosmicSphere.prototype._breakPlanet = function (k) {
+    var P = this.planets[k], N = this.count, pos = this.positions, vel = this.vel;
+    P.bcx = P.curCx; P.bcy = P.curCy; P.ringT = 0; P.flareT = 0;
+    for (var i = 0; i < N; i++) {
+      if (this.tileIdx[i] !== k) continue;
+      var dx = pos[i * 3] - P.curCx, dy = pos[i * 3 + 1] - P.curCy, dz = pos[i * 3 + 2];
+      var len = Math.hypot(dx, dy, dz) || 1e-4, sp = 1.2 + Math.random() * 2.0;
+      vel[i * 3] = dx / len * sp; vel[i * 3 + 1] = dy / len * sp; vel[i * 3 + 2] = dz / len * sp;
+    }
+  };
+
+  CosmicSphere.prototype._cascade = function (dt) {
+    var t = this.phaseTime, N = this.count, pos = this.positions, P = this.planets, v = this._v, vel = this.vel;
+    var mats = [], k;
+    for (k = 0; k < 7; k++) {
+      var p = P[k];
+      if (!p.broken) {
+        p.curCx = p.cx + p.oax * Math.sin(p.ow * t + p.oph);
+        p.curCy = p.cy + p.oay * Math.cos(p.ow * t + p.oph2);
+        var toBreak = p.breakAt - t, compress = 1;
+        if (toBreak <= 0.12 && toBreak > 0) compress = 1 - 0.12 * (1 - toBreak / 0.12);
+        p.breath = (1 + 0.03 * Math.sin(p.bw * t + p.bph)) * compress;
+        if (t >= p.breakAt) this._breakPlanet(k);
+      }
+      mats.push(this._updatePlanetMatrix(p, dt).clone());
+    }
+    var pl = this.pLocal;
+    for (var i = 0; i < N; i++) {
+      var ti = this.tileIdx[i];
+      if (ti === -1) {
+        pos[i * 3] += vel[i * 3] * dt; pos[i * 3 + 1] += vel[i * 3 + 1] * dt; pos[i * 3 + 2] += vel[i * 3 + 2] * dt;
+        var dg = Math.pow(0.92, dt * 60); vel[i * 3] *= dg; vel[i * 3 + 1] *= dg; vel[i * 3 + 2] *= dg;
+        continue;
+      }
+      var pp = P[ti];
+      if (pp.broken) {
+        pos[i * 3] += vel[i * 3] * dt; pos[i * 3 + 1] += vel[i * 3 + 1] * dt; pos[i * 3 + 2] += vel[i * 3 + 2] * dt;
+        var d2 = Math.pow(0.90, dt * 60); vel[i * 3] *= d2; vel[i * 3 + 1] *= d2; vel[i * 3 + 2] *= d2;
+      } else {
+        v.set(pl[i * 3], pl[i * 3 + 1], pl[i * 3 + 2]).applyMatrix4(mats[ti]);
+        pos[i * 3] = pp.curCx + v.x * pp.breath; pos[i * 3 + 1] = pp.curCy + v.y * pp.breath; pos[i * 3 + 2] = v.z * pp.breath;
+      }
+    }
+    this.geometry.attributes.position.needsUpdate = true;
+    for (k = 0; k < 7; k++) {
+      var p2 = P[k], rg = this.pRing[k], gl = this.pGlow[k];
+      if (p2.ringT !== undefined) {
+        p2.ringT += dt; var rt = p2.ringT / 0.4;
+        if (rt >= 1) { rg.visible = false; p2.ringT = undefined; }
+        else { var rs = p2.r * (1 + 3 * rt); rg.visible = true; rg.position.set(p2.bcx, p2.bcy, 0); rg.scale.set(rs, rs, rs); rg.material.opacity = 0.9 * (1 - rt); }
+      }
+      if (p2.broken) {
+        if (p2.flareT === undefined) p2.flareT = 0; p2.flareT += dt;
+        var ft = Math.min(p2.flareT / 0.4, 1);
+        gl.position.set(p2.bcx, p2.bcy, 0); gl.material.opacity = (0.25 * 1.4) * (1 - ft);
+      } else { gl.position.set(p2.curCx, p2.curCy, 0); }
+    }
+  };
+
   CosmicSphere.prototype._enterAlive = function () {
     this.points.visible = false; this.stars.visible = false;
     this.ring1.visible = this.ring2.visible = false; this.coreGlow.visible = false;
+    if (this.pGlow) for (var k = 0; k < 7; k++) { this.pGlow[k].visible = false; this.pRing[k].visible = false; }
     if (this.callbacks.onAlive) this.callbacks.onAlive();
   };
 
@@ -231,6 +392,8 @@
       case 'void': this._void(dt); break;
       case 'charge': this._charge(dt); break;
       case 'explode': this._explode(dt); break;
+      case 'planets': this._planets(dt); break;
+      case 'cascade': this._cascade(dt); break;
       case 'crystallize': this._crystallize(dt); break;
       case 'alive': break;
       default: this._void(dt);
@@ -283,9 +446,9 @@
   };
 
   CosmicSphere.prototype._crystallize = function (dt) {
-    var N = this.count, dur = this._dur.crystallize, stagger = 0.12;
+    var N = this.count, dur = this._dur.crystallize, stagger = 0.10 * (this.isMobile ? 0.72 : 1); // daisy-chain theo thứ tự ô
     var move = Math.max(0.4, dur - stagger*6);
-    var pos = this.positions, col = this.colors, bc = this.baseColor, cs = this.cStart, tg = this.tgt;
+    var pos = this.positions, col = this.colors, cc = this._cColStart, cs = this.cStart, tg = this.tgt;
     for (var i = 0; i < N; i++) {
       var ti = this.tileIdx[i]; if (ti === -1) continue;
       var delay = ti * stagger;
@@ -294,8 +457,8 @@
       pos[i*3]   = cs[i*3]   + (tg[i*3]   - cs[i*3])   * e;
       pos[i*3+1] = cs[i*3+1] + (tg[i*3+1] - cs[i*3+1]) * e;
       pos[i*3+2] = cs[i*3+2] + (tg[i*3+2] - cs[i*3+2]) * e;
-      var pc = this.tileColors[ti];
-      col[i*3]=bc[i*3]+(pc.r-bc[i*3])*e; col[i*3+1]=bc[i*3+1]+(pc.g-bc[i*3+1])*e; col[i*3+2]=bc[i*3+2]+(pc.b-bc[i*3+2])*e;
+      var pc = this.tileColors[ti]; // lerp từ màu sau cascade (accent) → accent chuẩn: gần như đứng yên, tránh pop
+      col[i*3]=cc[i*3]+(pc.r-cc[i*3])*e; col[i*3+1]=cc[i*3+1]+(pc.g-cc[i*3+1])*e; col[i*3+2]=cc[i*3+2]+(pc.b-cc[i*3+2])*e;
     }
     this.geometry.attributes.position.needsUpdate = true;
     this.geometry.attributes.color.needsUpdate = true;
@@ -305,6 +468,8 @@
       var d2 = k*stagger;
       if (this.phaseTime >= d2 + move*0.7) { this._revealed[k] = true; if (this.callbacks.onRevealTile) this.callbacks.onRevealTile(TILE_KEYS[k]); }
     }
+    // dust handover lúc 70% (P1.2)
+    if (!this._dustHanded && this.phaseTime >= dur * 0.7) { this._dustHanded = true; if (this.callbacks.onCrystallize) this.callbacks.onCrystallize(this.getDustHandover()); }
     // hạt tan mờ 30% cuối
     this.material.opacity = Math.max(0, 1 - Math.max(0, (this.phaseTime/dur - 0.7)/0.3));
   };
@@ -336,10 +501,11 @@
       this.ring1&&this.ring1.geometry, this.ring1&&this.ring1.material, this.ring2&&this.ring2.geometry,
       this.ring2&&this.ring2.material, this.coreGlow&&this.coreGlow.material];
     for (var i = 0; i < d.length; i++) { if (d[i] && d[i].dispose) d[i].dispose(); }
+    if (this.pGlow) for (var g = 0; g < 7; g++) { this.pGlow[g].material.dispose(); this.pRing[g].geometry.dispose(); this.pRing[g].material.dispose(); }
     if (this.renderer) { this.renderer.dispose(); if (this.canvas && this.canvas.parentNode) this.canvas.parentNode.removeChild(this.canvas); }
     // giải phóng buffer lớn
     this.positions = this.colors = this.baseDir = this.baseR = this.seed = this.baseColor =
-      this.vel = this.tgt = this.cStart = null;
+      this.vel = this.tgt = this.cStart = this.pStart = this.pLocal = this._cColStart = null;
   };
 
   // ======================= Bootstrap =======================
@@ -350,6 +516,16 @@
   function revealTile(key) {
     var el = document.querySelector('.tile[data-tile="' + key + '"]');
     if (el) el.classList.add('cosmic-crystallized');
+  }
+
+  // ALIVE: bật vũ trụ nền (tinh vân fade in) + gán float lệch pha cho 7 ô
+  function activateAlive() {
+    document.body.classList.add('cosmic-alive');
+    var durs = [6.0, 6.8, 7.4, 8.2, 8.8, 9.4, 7.8], dels = [0, -2.1, -4.3, -1.2, -5.6, -3.0, -6.4];
+    for (var k = 0; k < TILE_KEYS.length; k++) {
+      var el = document.querySelector('.tile[data-tile="' + TILE_KEYS[k] + '"]');
+      if (el) { el.style.setProperty('--float-dur', durs[k] + 's'); el.style.setProperty('--float-delay', dels[k] + 's'); }
+    }
   }
 
   // Cubic-bezier evaluator (bisection) — dùng cho easing hút vào lõi
@@ -364,15 +540,21 @@
   }
 
   // Lời chào "HELLO → I'M QUAN" — driven by sim-time của CosmicSphere (throttle-safe)
-  function makeGreeting(sphere, root) {
+  // G = tổng thời lượng void+charge; mốc timeline tính theo tỷ lệ G (không giây tuyệt đối).
+  function makeGreeting(sphere, root, G) {
     if (!root) return { update: function () {}, destroy: function () {} };
     var easeSuck = makeBezier(0.55, 0, 1, 0.45);
-    var STAGGER_IN = 0.04, T_HELLO = 0.30, T_SWAP = 1.30, T_SWAP_MID = 1.42;
-    var T_SUCK = 2.40, T_SUCK_END = 2.90, SUCK_STAG = 0.035;
+    var STAGGER_IN = 0.04, SUCK_STAG = 0.035;
+    var T_HELLO = 0.091 * G, T_SWAP = 0.394 * G, T_SWAP_MID = 0.430 * G;
+    var T_SUCK = 0.727 * G, T_SUCK_END = 0.879 * G;
     var chars = [], done = false, suckData = null;
     var built = { hello: false, swap: false, swapMid: false, suckInit: false, cleared: false };
 
-    function place() { var b = sphere.projectToScreen(0, -sphere.R, 0); root.style.top = (b.y + 40) + 'px'; }
+    function place() {
+      sphere.camera.updateMatrixWorld(true);
+      var b = sphere.projectToScreen(0, -sphere.R, 0);
+      if (isFinite(b.y)) root.style.top = (b.y + 40) + 'px';
+    }
     function renderWord(str, visibleNow) {
       root.innerHTML = ''; chars = [];
       for (var i = 0; i < str.length; i++) {
@@ -424,20 +606,72 @@
     };
   }
 
+  // Nhãn hành tinh — text đọc từ .tile__label, bám tâm hành tinh, thổi bay khi vỡ
+  function makePlanetLabels(sphere, stage) {
+    var els = [], built = false, dead = false, showAt = 0;
+    function build() {
+      if (!sphere.planets) return;
+      showAt = Math.max(0.3, sphere._dur.planets * 0.35) + 0.2;
+      for (var k = 0; k < 7; k++) {
+        var src = document.querySelector('.tile[data-tile="' + TILE_KEYS[k] + '"] .tile__label');
+        var span = document.createElement('span');
+        span.className = 'planet-label';
+        span.textContent = src ? src.textContent : '';
+        span.style.setProperty('--pl-accent', '#' + sphere.tileColors[k].getHexString());
+        stage.appendChild(span);
+        els.push({ el: span, shown: false, blasting: false, blastAge: 0, gone: false });
+      }
+      built = true;
+    }
+    function pos(L, p) {
+      var c = sphere.projectToScreen(p.curCx, p.curCy, 0);
+      var pr = Math.abs(sphere.projectToScreen(p.curCx + p.r, p.curCy, 0).x - c.x);
+      if (isFinite(c.x)) { L.el.style.left = c.x + 'px'; L.el.style.top = (c.y + pr + 14) + 'px'; }
+    }
+    return {
+      update: function (dt) {
+        if (dead || !stage) return;
+        var phase = sphere.phase, P = sphere.planets;
+        if (phase === 'planets') {
+          if (!built) build();
+          for (var k = 0; k < 7; k++) { var L = els[k]; if (L.gone) continue; pos(L, P[k]); if (!L.shown && sphere.phaseTime >= showAt) { L.shown = true; L.el.classList.add('pl-in'); } }
+        } else if (phase === 'cascade' && built) {
+          for (var k2 = 0; k2 < 7; k2++) {
+            var L2 = els[k2]; if (L2.gone) continue;
+            if (!P[k2].broken) { pos(L2, P[k2]); }
+            else {
+              if (!L2.blasting) { L2.blasting = true; L2.el.classList.add('pl-blast'); }
+              L2.blastAge += dt;
+              if (L2.blastAge >= 0.25) { if (L2.el.parentNode) L2.el.parentNode.removeChild(L2.el); L2.gone = true; }
+            }
+          }
+        }
+      },
+      destroy: function () {
+        if (dead) return; dead = true;
+        for (var k = 0; k < els.length; k++) { if (els[k].el.parentNode) els[k].el.parentNode.removeChild(els[k].el); }
+        els = [];
+      }
+    };
+  }
+
   function boot() {
     var stage = document.getElementById('cosmic-stage');
     var bento = document.getElementById('bento');
     if (!bento) return;
 
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var seen = false; // intro replay mỗi lần reload (không nhớ phiên)
+    // Gate 1 lần/phiên; ?intro ép chạy lại (test). scrollRestoration fix vẫn giữ ở dưới.
+    var forceIntro = false; try { forceIntro = new URLSearchParams(location.search).has('intro'); } catch (e) {}
+    var seen = false; if (!forceIntro) { try { seen = sessionStorage.getItem('cosmic-intro-seen') === '1'; } catch (e) {} }
+    function markSeen() { try { sessionStorage.setItem('cosmic-intro-seen', '1'); } catch (e) {} }
     var webgl = false; try { var tc = document.createElement('canvas'); webgl = !!(window.WebGLRenderingContext && (tc.getContext('webgl') || tc.getContext('experimental-webgl'))); } catch (e) {}
 
-    // D3 reduced / D4 no-WebGL/THREE → bento tĩnh ngay, không intro, không dust
-    if (reduce || typeof THREE === 'undefined' || !webgl) { revealAllTiles(); return; }
+    // D3 reduced / D4 no-WebGL/THREE → bento tĩnh ngay, không intro, không dust (tinh vân tĩnh)
+    if (reduce || typeof THREE === 'undefined' || !webgl) { revealAllTiles(); activateAlive(); return; }
 
-    // D2 lần 2 trong phiên → bento ngay + dust, không intro
-    if (seen) { revealAllTiles(); if (window.CosmicDust) window.CosmicDust.start(null); return; }
+    // D2 lần 2 trong phiên → bento ngay + dust + vũ trụ nền, không intro
+    if (seen) { revealAllTiles(); activateAlive(); if (window.CosmicDust) { window.CosmicDust.start(null); if (CosmicDust.enterAlive) CosmicDust.enterAlive(); } return; }
 
     // ---- Auto-play intro khai sinh ----
     // Reload: chặn trình duyệt khôi phục vị trí cuộn (scroll restoration) —
@@ -446,13 +680,14 @@
     window.scrollTo(0, 0);
     document.body.classList.add('cosmic-intro-running');
     var sphere = new CosmicSphere(); sphere.init(stage); window.cosmicSphere = sphere;
-    var greet = makeGreeting(sphere, document.getElementById('cosmic-greet'));
-    var dur = sphere.isMobile
-      ? { void: 1.0, charge: 1.3, explode: 1.3, crystallize: 1.6 }
-      : { void: 1.5, charge: 1.8, explode: 1.7, crystallize: 2.0 };
+    var mk = sphere.isMobile ? 0.72 : 1;
+    var base = { void: 1.5, charge: 1.8, explode: 1.4, planets: 1.6, cascade: 1.5, crystallize: 1.3 };
+    var dur = {}; for (var dk in base) dur[dk] = base[dk] * mk;
     sphere._dur = dur;
-    var order = ['void', 'charge', 'explode', 'crystallize'];
-    var bounds = [dur.void, dur.charge, dur.explode, dur.crystallize];
+    var order = ['void', 'charge', 'explode', 'planets', 'cascade', 'crystallize'];
+    var bounds = order.map(function (k) { return dur[k]; });
+    var greet = makeGreeting(sphere, document.getElementById('cosmic-greet'), dur.void + dur.charge);
+    var labels = makePlanetLabels(sphere, stage);
 
     var flash = document.getElementById('ci-flash-overlay');
     var skipBtn = document.getElementById('skip-intro');
@@ -478,14 +713,27 @@
         greet.update(elapsed);
       }
       origUpdate(dt);
+      if (!finished) labels.update(dt);
     };
 
     function finishIntro(fast) {
       if (finished) return; finished = true;
-      greet.destroy();
+      markSeen();
+      greet.destroy(); labels.destroy();
+      // Seed bầu trời ALIVE từ ~60 vị trí sao WebGL cuối (nối tiếp, không bật lại từ đầu)
+      if (window.CosmicDust && CosmicDust.seedStars && sphere.starPos) {
+        var seeds = [], sp = sphere.starPos, M = sphere.starCount || 0;
+        for (var si = 0; si < M && seeds.length < 60; si++) {
+          var s = sphere.projectToScreen(sp[si*3], sp[si*3+1], sp[si*3+2]);
+          if (isFinite(s.x) && s.x >= 0 && s.x <= window.innerWidth && s.y >= 0 && s.y <= window.innerHeight) seeds.push({ x: s.x, y: s.y });
+        }
+        CosmicDust.seedStars(seeds);
+      }
       sphere.setPhase('alive');
       revealAllTiles();
+      activateAlive();
       if (window.CosmicDust) window.CosmicDust.start(null);
+      if (window.CosmicDust && CosmicDust.enterAlive) CosmicDust.enterAlive();
       if (skipBtn) skipBtn.style.display = 'none'; // nút Bỏ qua BIẾN MẤT (sửa lỗi bản cũ)
       if (stage) { stage.classList.add('cosmic-stage-out'); }
       cleanup();
