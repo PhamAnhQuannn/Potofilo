@@ -41,19 +41,42 @@
     p.tw = Math.random() * Math.PI * 2; p.borrow = null;
     return p;
   }
-  function makeStar(p, seed) {
-    p.x = seed && seed.x != null ? seed.x : rand(0, W);
-    p.y = seed && seed.y != null ? seed.y : rand(0, H);
-    p.size = rand(0.6, 1.2); p.baseOp = rand(0.2, 0.5);
+  function gauss() { return (Math.random() + Math.random() + Math.random() - 1.5); } // ~N(0,~0.5)
+  function bandPoint() {
+    // điểm trên trục dải (qua tâm, góc -24°) + lệch vuông góc gaussian σ≈12vh
+    var ang = -24 * Math.PI / 180, dx = Math.cos(ang), dy = Math.sin(ang);
+    var t = rand(-0.8, 0.8) * W, n = gauss() * 2 * (0.12 * H);
+    return { x: W / 2 + dx * t - dy * n, y: H / 2 + dy * t + dx * n };
+  }
+  function makeFaint(p, seed, onBand) {
+    if (seed && seed.x != null) { p.x = seed.x; p.y = seed.y; }
+    else if (onBand) { var b = bandPoint(); p.x = b.x; p.y = b.y; }
+    else { p.x = rand(0, W); p.y = rand(0, H); }
+    p.tier = 'faint'; p.size = rand(0.6, 1.1); p.baseOp = rand(0.25, 0.5); p.twAmp = 0.15;
     p.color = STAR_COLORS[(Math.random() * STAR_COLORS.length) | 0];
     p.tw = Math.random() * Math.PI * 2; p.twSpeed = (2 * Math.PI) / rand(3, 6);
+    return p;
+  }
+  function makeMid(p) {
+    p.x = rand(0, W); p.y = rand(0, H);
+    p.tier = 'mid'; p.size = rand(1.5, 2.2); p.baseOp = rand(0.5, 0.8); p.twAmp = 0.15;
+    p.color = STAR_COLORS[(Math.random() * STAR_COLORS.length) | 0];
+    p.tw = Math.random() * Math.PI * 2; p.twSpeed = (2 * Math.PI) / rand(3, 6);
+    return p;
+  }
+  function makeHero(p, glint) {
+    p.x = Math.random() < 0.5 ? rand(0, 0.25 * W) : rand(0.75 * W, W); // chỉ hai cánh
+    p.y = rand(0, H);
+    p.tier = 'hero'; p.size = rand(2.5, 3.5); p.baseOp = rand(0.75, 0.95); p.twAmp = 0.06;
+    p.color = Math.random() < 0.7 ? (Math.random() < 0.5 ? '#CDE3FF' : '#FFFFFF') : STAR_COLORS[(Math.random() * STAR_COLORS.length) | 0];
+    p.tw = Math.random() * Math.PI * 2; p.twSpeed = (2 * Math.PI) / rand(3, 6); p.glint = !!glint;
     return p;
   }
   function makeEmber(p) {
     p.x = rand(0, W); p.y = rand(0, H);
     var ang = rand(-Math.PI * 0.75, -Math.PI * 0.25), spd = rand(1, 3);
     p.vx = Math.cos(ang) * spd; p.vy = Math.sin(ang) * spd;
-    p.size = rand(3, 5); p.baseOp = rand(0.10, 0.18);
+    p.size = rand(3, 5); p.baseOp = rand(0.14, 0.24);
     p.color = EMBER_COLORS[(Math.random() * EMBER_COLORS.length) | 0];
     return p;
   }
@@ -73,11 +96,15 @@
   function densityAt() { return 1 - 0.7 * Math.min(1, scrollY / docScroll); }
 
   function initStars() {
-    nStars = isMobile ? 70 : 140; stars = new Array(nStars);
-    for (var i = 0; i < nStars; i++) { var seed = starSeeds && starSeeds[i] ? starSeeds[i] : null; stars[i] = makeStar({}, seed); }
+    var nFaint = isMobile ? 90 : 200, nMid = isMobile ? 22 : 50, nHero = isMobile ? 4 : 9;
+    nStars = nFaint + nMid + nHero; stars = new Array(nStars); var idx = 0;
+    // thứ tự [hero, mid, faint] để auto-reduce (giảm từ cuối) rớt faint trước, giữ hero
+    for (var h = 0; h < nHero; h++) stars[idx++] = makeHero({}, h < 3);
+    for (var m = 0; m < nMid; m++) stars[idx++] = makeMid({});
+    for (var f = 0; f < nFaint; f++) stars[idx++] = makeFaint({}, starSeeds && starSeeds[f] ? starSeeds[f] : null, Math.random() < 0.4);
   }
   function initEmbers() {
-    nEmbers = isMobile ? 5 : 10; embers = new Array(nEmbers);
+    nEmbers = isMobile ? 7 : 14; embers = new Array(nEmbers);
     for (var i = 0; i < nEmbers; i++) embers[i] = makeEmber({});
   }
 
@@ -104,15 +131,28 @@
     var parallax = -scrollY * 0.25;
     var gmul = densityAt();
 
-    // ---- stars ----
+    // ---- stars (3 cấp) ----
     if (alive) {
       for (var s = 0; s < nStars; s++) {
         var st = stars[s];
-        var tw = Math.sin(time * st.twSpeed + st.tw) * 0.15;
-        var op = Math.max(0, Math.min(0.4, st.baseOp + tw));
+        var tw = Math.sin(time * st.twSpeed + st.tw) * st.twAmp;
+        var op = Math.max(0, Math.min(0.95, st.baseOp + tw));
         if (op <= 0.01) continue;
-        ctx.globalAlpha = op; ctx.fillStyle = st.color;
-        ctx.beginPath(); ctx.arc(st.x + px * 0.02, st.y + py * 0.02, st.size, 0, Math.PI * 2); ctx.fill();
+        var sx = st.x + px * 0.02, sy = st.y + py * 0.02, r = st.size;
+        ctx.fillStyle = st.color;
+        if (st.tier === 'hero') {
+          // quầng 2 lớp (giả radial, không tạo gradient trong loop) + lõi
+          ctx.globalAlpha = op * 0.18; ctx.beginPath(); ctx.arc(sx, sy, r * 4, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = op * 0.32; ctx.beginPath(); ctx.arc(sx, sy, r * 2, 0, Math.PI * 2); ctx.fill();
+          ctx.globalAlpha = op; ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
+          if (st.glint) {
+            ctx.globalAlpha = 0.35; ctx.strokeStyle = st.color; ctx.lineWidth = 0.5;
+            ctx.beginPath(); ctx.moveTo(sx - r * 5, sy); ctx.lineTo(sx + r * 5, sy);
+            ctx.moveTo(sx, sy - r * 5); ctx.lineTo(sx, sy + r * 5); ctx.stroke();
+          }
+        } else {
+          ctx.globalAlpha = op; ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
+        }
       }
     }
 
