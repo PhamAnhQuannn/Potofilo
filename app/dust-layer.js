@@ -124,7 +124,7 @@
     ctx.globalCompositeOperation = 'source-over';
     if (galaxyCoreTex) {                                 // lõi thiên hà — sáng nhất nền
       var gw = 36 / 100 * W;
-      ctx.globalAlpha = 1 * (1 + 0.08 * Math.sin(time * (2 * Math.PI / 12)));
+      ctx.globalAlpha = Math.min(1, 0.92 * (1 + 0.08 * Math.sin(time * (2 * Math.PI / 12))));
       ctx.save(); ctx.translate(0.72 * W + px * 0.02, 0.30 * H + py * 0.02); ctx.rotate(-24 * Math.PI / 180); ctx.scale(1, 0.6);
       ctx.drawImage(galaxyCoreTex, -gw / 2, -gw / 2, gw, gw); ctx.restore();
     }
