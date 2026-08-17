@@ -4,6 +4,7 @@ Website portfolio cá nhân. Trưng bày dự án, kỹ năng, liên hệ. Ưu t
 
 ## Luật cứng (hard rules)
 
+0. **Hiến pháp thiết kế.** TRƯỚC mọi thay đổi thị giác (màu, hiệu ứng, layout, animation): đọc `brain/context/design-constitution.md` và chạy quy trình 6 câu hỏi ở cuối file. Đề xuất vi phạm bất kỳ trụ nào → dừng và hỏi người dùng.
 1. **Chỉ làm đúng thứ được yêu cầu.** Không tự thêm feature, refactor, file, hay "nice-to-have".
    - Trước mỗi việc mới: đánh giá tác động + giữ đúng phạm vi theo `.claude/rules/workflow.md`. Kẹt/khó → giải thích + để Quân quyết, không tự mở rộng.
 2. **Não bộ là nguồn sự thật.** Trước khi làm, đọc `brain/INDEX.md` để định tuyến. Sau khi làm, cập nhật `brain/tracking/STATE.md`.
