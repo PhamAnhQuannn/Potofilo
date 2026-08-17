@@ -48,7 +48,7 @@ h1, h2, h3 { font-family: var(--font-display); font-weight: 600; line-height: 1.
    BENTO GRID — 1 viewport (desktop ≥1024px)
    ============================================================ */
 .bento {
-  position: relative; z-index: 1;
+  position: relative; z-index: 1; perspective: 1000px;
   max-width: 1200px; margin: 0 auto; padding: 24px;
   height: 100vh; box-sizing: border-box;
   display: grid; gap: 14px;
@@ -210,6 +210,8 @@ body.cosmic-alive .nebula-cloud {
 @keyframes tile-float { 50% { transform: translateY(-3px); } }
 body.cosmic-alive .tile.cosmic-crystallized {
   animation: tile-float var(--float-dur, 7s) ease-in-out infinite var(--float-delay, 0s);
+  transform-style: preserve-3d;
+  transition: transform 0.18s ease-out, box-shadow 0.3s ease;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.07),
               0 24px 50px -20px rgba(2,2,10,0.9),
               0 0 0 1px rgba(255,255,255,0.02),

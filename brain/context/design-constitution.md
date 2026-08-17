@@ -29,17 +29,18 @@ CTA vàng luôn là điểm sáng nhất VÙNG NỘI DUNG; lõi thiên hà sáng
 ## Trụ 4 — Chiều sâu (đồng biến: gần hơn = nét + nhanh + ấm + phản ứng hơn)
 Tu chính v1.1 (decision 0016): tách "sao & bụi" — sao ở XA hàng năm ánh sáng (sau
 thiên thể, bị hành tinh che), bụi/than hồng là hạt GẦN camera (trước thiên thể).
-| Lớp | Gồm | Chất liệu | Chuyển động | Parallax |
+Parallax v1.2 (decision 0017): dãn phổ hệ số để lia chuột lộ chiều sâu rõ hơn.
+| Lớp | Gồm | Chất liệu | Chuyển động | Parallax chuột |
 |---|---|---|---|---|
-| 1 Khí quyển | tinh vân sương, dải ngân hà | mềm, blur | thở 18–30s | 0.02 |
-| 1b Sao xa | sao 3 cấp (faint/mid/hero) | sắc, nhỏ | twinkle, trôi 0 | 0.02 |
-| 2 Thiên thể | hành tinh, trăng, lõi thiên hà | có hình + ánh sáng | trôi ~90s | 0.04 |
-| 3 Bụi gần | bụi, than hồng, sao băng | sắc | trôi 2–6px/s | 0.06–0.12 |
-| 4 Nội dung | tile bento | nét nhất, tối trên nền rực | float ±3px lệch pha | ngược 3px |
-| 5 Tương tác | CTA, hover, expand | ấm nhất | tức thì | theo chuột |
-- **Z-order vẽ:** tinh vân < sao xa < thiên thể < bụi/embers < tile < overlay.
+| 1 Khí quyển | tinh vân sương, dải ngân hà | mềm, blur | thở 18–30s | 0.03 |
+| 1b Sao xa | sao 3 cấp (faint/mid/hero) | sắc, nhỏ | twinkle, trôi 0 | 0.05 |
+| 2 Thiên thể | hành tinh, trăng, lõi thiên hà | có hình + ánh sáng | trôi ~90s | 0.08 |
+| 3 Bụi gần | bụi (0.15) / than hồng (0.22), sao băng | sắc | trôi 2–6px/s | 0.15–0.22 |
+| 4 Nội dung | tile bento | nét nhất, tối trên nền rực | float ±3px lệch pha | ngược ≤6px + tilt 3D ±5° |
+| 5 Tương tác | CTA, hover, expand, đèn con trỏ | ấm nhất | tức thì | theo chuột |
+- **Z-order vẽ:** tinh vân < sao xa < thiên thể < đèn con trỏ < bụi/embers < tile < overlay.
   Hành tinh PHẢI che sao nằm sau lưng (sao xuyên qua hành tinh = cờ đỏ cartoon).
-- Đồng biến: xa hơn = parallax nhỏ hơn (sao xa 0.02 < thiên thể 0.04 < bụi 0.06–0.12).
+- Đồng biến: xa hơn = parallax nhỏ hơn (0.03 < 0.05 < 0.08 < 0.15–0.22).
 - Vi phạm đồng biến (lớp xa nhanh hơn lớp gần) = phá chiều sâu.
 
 ## Trụ 5 — Phân cấp năng lượng theo thời gian
@@ -48,6 +49,10 @@ thiên thể, bị hành tinh che), bụi/than hồng là hạt GẦN camera (tr
 - Tương tác (expand, ngưng tụ tiêu đề) = 30
 - Nền ALIVE = 5 (biên độ nhỏ, chu kỳ dài, lệch pha)
 - Không hiệu ứng nào vượt bậc; không thêm vụ nổ thứ hai ở bất kỳ đâu.
+- **Tu chính v1.2 (decision 0017):** Chuyển động DO NGƯỜI DÙNG gây ra (parallax,
+  đèn con trỏ, tile tilt, hút bụi hover) được miễn trần nền — trần riêng = 30.
+  Chuyển động TỰ PHÁT của nền giữ trần 5, ưu tiên TIẾN HÓA CHẬM (hành tinh quay
+  140s, sọc trôi) + SỰ KIỆN HIẾM (xung lõi, sao băng, cửa sổ sáng) thay vì lặp đều.
 
 ## Công thức "floating" (áp cho mọi phần tử nội dung nổi)
 1. Tách nền: tối hơn nền rực xung quanh

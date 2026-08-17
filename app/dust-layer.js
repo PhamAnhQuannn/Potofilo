@@ -23,6 +23,8 @@
   var scrollY = 0, docScroll = 1, lastT = 0, slowFrames = 0, time = 0;
   var attractor = { x: 0, y: 0, active: false };
   var mx = 0, my = 0, px = 0, py = 0;                 // parallax chuột (target/current)
+  var cursorX = 0, cursorY = 0, clx = 0, cly = 0, lightAmt = 0, lightTarget = 0; // đèn con trỏ
+  var cursorTex = null, prevTiltTile = null;
   var starSeeds = null, bentoEl = null;
   var meteor = { active: false, x: 0, y: 0, vx: 0, vy: 0, age: 0, len: 0 };
   var nextMeteor = 1e9;
@@ -178,7 +180,7 @@
 
   function drawTex(tex, cxF, cyF, sizeVw, rot, baseOp, phase) {
     if (!tex) return;
-    var w = sizeVw / 100 * W, cx = cxF * W + px * 0.02, cy = cyF * H + py * 0.02;
+    var w = sizeVw / 100 * W, cx = cxF * W + px * 0.03, cy = cyF * H + py * 0.03;
     ctx.globalAlpha = baseOp * (1 + 0.15 * Math.sin(time * (2 * Math.PI / 22) + phase));
     ctx.save(); ctx.translate(cx, cy); if (rot) ctx.rotate(rot); ctx.drawImage(tex, -w / 2, -w / 2, w, w); ctx.restore();
   }
@@ -191,7 +193,7 @@
     if (nebTex.band) {                                   // dải: kéo giãn ×3/×0.6, rotate -24°
       var w = 40 / 100 * W;
       ctx.globalAlpha = 0.55 * (1 + 0.15 * Math.sin(time * (2 * Math.PI / 22) + 3.1));
-      ctx.save(); ctx.translate(W / 2 + px * 0.02, H / 2 + py * 0.02); ctx.rotate(-24 * Math.PI / 180); ctx.scale(3, 0.6);
+      ctx.save(); ctx.translate(W / 2 + px * 0.03, H / 2 + py * 0.03); ctx.rotate(-24 * Math.PI / 180); ctx.scale(3, 0.6);
       ctx.drawImage(nebTex.band, -w / 2, -w / 2, w, w); ctx.restore();
     }
     ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
@@ -203,20 +205,20 @@
     var gridLeft = Math.max(0, (W - 1200) / 2), gridRight = Math.min(W, (W + 1200) / 2);
     if (planetTex) {
       var pd = (isMobile ? 0.36 : 0.48) * W, pR = pd / 2;
-      var pcx = (gridLeft - 40 - pR) + px * 0.04 + 3 * Math.sin(time * (2 * Math.PI / 90)); // đĩa nằm trái grid ≥40px
-      var pcy = 1.05 * H + py * 0.04;
+      var pcx = (gridLeft - 40 - pR) + px * 0.08 + 3 * Math.sin(time * (2 * Math.PI / 90)); // đĩa nằm trái grid ≥40px
+      var pcy = 1.05 * H + py * 0.08;
       ctx.globalAlpha = 1; ctx.drawImage(planetTex, pcx - pR, pcy - pR, pd, pd);
     }
     if (moonTex) {
       var md = 0.07 * W, mR = md / 2;
-      var mcx = Math.max(0.82 * W, gridRight + 40 + mR) + px * 0.04 + 2 * Math.sin(time * (2 * Math.PI / 110));
-      var mcy = 0.22 * H + py * 0.04;
+      var mcx = Math.max(0.82 * W, gridRight + 40 + mR) + px * 0.08 + 2 * Math.sin(time * (2 * Math.PI / 110));
+      var mcy = 0.22 * H + py * 0.08;
       ctx.globalAlpha = 1; ctx.drawImage(moonTex, mcx - mR, mcy - mR, md, md);
     }
     if (galaxyCoreTex) {                                 // lõi thiên hà — sáng nhất nền
       var gw = 36 / 100 * W;
       ctx.globalAlpha = Math.min(1, 0.92 * (1 + 0.08 * Math.sin(time * (2 * Math.PI / 12))));
-      ctx.save(); ctx.translate(0.72 * W + px * 0.04, 0.30 * H + py * 0.04); ctx.rotate(-24 * Math.PI / 180); ctx.scale(1, 0.6);
+      ctx.save(); ctx.translate(0.72 * W + px * 0.08, 0.30 * H + py * 0.08); ctx.rotate(-24 * Math.PI / 180); ctx.scale(1, 0.6);
       ctx.drawImage(galaxyCoreTex, -gw / 2, -gw / 2, gw, gw); ctx.restore();
     }
     ctx.globalAlpha = 1;
@@ -328,8 +330,11 @@
     } else slowFrames = 0;
 
     // parallax chuột (desktop, alive)
-    if (!isMobile && alive) { px += (mx - px) * 0.04; py += (my - py) * 0.04; }
-    else { px *= 0.9; py *= 0.9; }
+    if (!isMobile && alive) {
+      px += (mx - px) * 0.05; py += (my - py) * 0.05;
+      clx += (cursorX - clx) * 0.06; cly += (cursorY - cly) * 0.06;
+      lightAmt += (lightTarget - lightAmt) * Math.min(1, dt * 1.25); // fade ~0.8s
+    } else { px *= 0.9; py *= 0.9; }
 
     var t0 = DEBUG ? performance.now() : 0;
     ctx.clearRect(0, 0, W, H);
@@ -344,9 +349,10 @@
       for (var s = 0; s < nStars; s++) {
         var st = stars[s];
         var tw = Math.sin(time * st.twSpeed + st.tw) * st.twAmp;
+        var sx = st.x + px * 0.05, sy = st.y + py * 0.05, r = st.size;
         var op = Math.max(0, Math.min(0.95, st.baseOp + tw));
+        if (lightAmt > 0.01) { var ld = Math.hypot(sx - clx, sy - cly); if (ld < 200) op = Math.min(0.95, op + 0.15 * (1 - ld / 200) * lightAmt); } // đèn con trỏ làm sáng sao gần
         if (op <= 0.01) continue;
-        var sx = st.x + px * 0.02, sy = st.y + py * 0.02, r = st.size;
         ctx.fillStyle = st.color;
         if (st.tier === 'hero') {
           // quầng 2 lớp (giả radial, không tạo gradient trong loop) + lõi
@@ -367,6 +373,11 @@
     // ---- lớp 2: thiên thể (che sao sau lưng) ----
     if (alive) drawCelestials();
 
+    // ---- đèn con trỏ (trên sao, dưới bụi) — đèn cục bộ, KHÔNG phải mặt trời ----
+    if (alive && !isMobile && cursorTex && lightAmt > 0.01) {
+      ctx.globalAlpha = 0.05 * lightAmt; ctx.drawImage(cursorTex, clx - 300, cly - 300, 600, 600); ctx.globalAlpha = 1;
+    }
+
     // ---- lớp 3: dust (bụi gần camera, trước thiên thể) ----
     for (var i = 0; i < nDust; i++) {
       var p = dust[i];
@@ -383,6 +394,10 @@
           var ddx = attractor.x - p.x, ddy = attractor.y - p.y, dist = Math.hypot(ddx, ddy);
           if (dist < 150 && dist > 1) { var force = (1 - dist / 150) * 30; p.vx += (ddx / dist) * force * dt; p.vy += (ddy / dist) * force * dt; }
         }
+        if (lightAmt > 0.3 && !isMobile) { // đèn con trỏ hút bụi nhẹ (50% hover)
+          var cdx = clx - p.x, cdy = cly - p.y, cdd = Math.hypot(cdx, cdy);
+          if (cdd < 150 && cdd > 1) { var cf = (1 - cdd / 150) * 15 * lightAmt; p.vx += (cdx / cdd) * cf * dt; p.vy += (cdy / cdd) * cf * dt; }
+        }
         p.x += p.vx * dt; p.y += p.vy * dt; p.vx *= 0.99; p.vy *= 0.99;
         if (p.x < -5) p.x = W + 5; else if (p.x > W + 5) p.x = -5;
         if (p.y < -5) p.y = H + 5; else if (p.y > H + 5) p.y = -5;
@@ -392,7 +407,7 @@
       var dop = Math.max(0, Math.min(0.4, (p.baseOp + dtw) * gmul));
       if (dop <= 0.01) continue;
       ctx.globalAlpha = dop; ctx.fillStyle = p.color;
-      ctx.beginPath(); ctx.arc(p.x + px * 0.06, dy, p.size, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.arc(p.x + px * 0.15, dy, p.size, 0, Math.PI * 2); ctx.fill();
     }
 
     // ---- embers (2 arc lồng, không filter) ----
@@ -402,7 +417,7 @@
         em.x += em.vx * dt; em.y += em.vy * dt; em.vx *= 0.995; em.vy *= 0.995;
         if (em.x < -8) em.x = W + 8; else if (em.x > W + 8) em.x = -8;
         if (em.y < -8) em.y = H + 8; else if (em.y > H + 8) em.y = -8;
-        var ey = ((em.y + parallax) % H + H) % H, ex = em.x + px * 0.12;
+        var ey = ((em.y + parallax) % H + H) % H, ex = em.x + px * 0.22;
         ctx.fillStyle = em.color;
         ctx.globalAlpha = em.baseOp * 0.5;
         ctx.beginPath(); ctx.arc(ex, ey, em.size * 2.5, 0, Math.PI * 2); ctx.fill();
@@ -418,8 +433,8 @@
 
     // ---- bento parallax (ngược hướng chuột, ±3px) ----
     if (bentoEl && !isMobile) {
-      var kx = 3 / (W * 0.5 || 1), ky = 3 / (H * 0.5 || 1);
-      var bx = Math.max(-3, Math.min(3, -px * kx)), by = Math.max(-3, Math.min(3, -py * ky));
+      var kx = 6 / (W * 0.5 || 1), ky = 6 / (H * 0.5 || 1);
+      var bx = Math.max(-6, Math.min(6, -px * kx)), by = Math.max(-6, Math.min(6, -py * ky));
       bentoEl.style.transform = 'translate(' + bx.toFixed(2) + 'px,' + by.toFixed(2) + 'px)';
     }
 
@@ -476,9 +491,38 @@
     initStars(); initEmbers(); scheduleTextures();
     nextMeteor = time + rand(25, 40);
     bentoEl = document.querySelector('.bento');
-    if (!isMobile) window.addEventListener('mousemove', onMouseParallax, { passive: true });
+    if (!isMobile) {
+      cursorTex = makeCursorTex();
+      cursorX = clx = W / 2; cursorY = cly = H / 2;
+      window.addEventListener('pointermove', onPointerMove, { passive: true });   // 1 listener: parallax + đèn + tilt
+      window.addEventListener('pointerdown', onPointerDown, { passive: true });   // reset tilt trước FLIP expand
+      document.addEventListener('mouseleave', function () { lightTarget = 0; if (prevTiltTile) { prevTiltTile.style.transform = ''; prevTiltTile = null; } });
+    }
   }
-  function onMouseParallax(e) { mx = e.clientX - W / 2; my = e.clientY - H / 2; }
+  function makeCursorTex() {
+    var s = 256, cv = document.createElement('canvas'); cv.width = cv.height = s; var g = cv.getContext('2d');
+    var grd = g.createRadialGradient(s / 2, s / 2, 0, s / 2, s / 2, s / 2);
+    grd.addColorStop(0, 'rgba(255,200,100,1)'); grd.addColorStop(1, 'rgba(255,200,100,0)');
+    g.fillStyle = grd; g.beginPath(); g.arc(s / 2, s / 2, s / 2, 0, Math.PI * 2); g.fill(); return cv;
+  }
+  function onPointerMove(e) {
+    mx = e.clientX - W / 2; my = e.clientY - H / 2;
+    cursorX = e.clientX; cursorY = e.clientY; lightTarget = 1;
+    // A.3 tile tilt — áp trực tiếp (rẻ: 1 rect + style)
+    var tile = e.target && e.target.closest ? e.target.closest('.tile.cosmic-crystallized') : null;
+    if (tile !== prevTiltTile && prevTiltTile) prevTiltTile.style.transform = '';
+    if (tile) {
+      var r = tile.getBoundingClientRect();
+      var nx = (e.clientX - r.left) / r.width - 0.5, ny = (e.clientY - r.top) / r.height - 0.5;
+      tile.style.transform = 'translateY(-4px) rotateX(' + (-ny * 5).toFixed(2) + 'deg) rotateY(' + (nx * 5).toFixed(2) + 'deg)';
+    }
+    prevTiltTile = tile;
+  }
+  function onPointerDown(e) { // reset tilt để bento.js FLIP đo rect ở tilt=0
+    var tile = e.target && e.target.closest ? e.target.closest('.tile.cosmic-crystallized') : null;
+    if (tile) tile.style.transform = '';
+    if (prevTiltTile) { prevTiltTile.style.transform = ''; prevTiltTile = null; }
+  }
 
   // C1 — tiêu đề ngưng tụ 1 lần/section/phiên (chỉ trên nhóm dust)
   function setupCondense() {
