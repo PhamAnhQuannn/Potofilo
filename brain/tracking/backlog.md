@@ -18,3 +18,7 @@ Việc chờ làm. Kéo lên STATE.md khi bắt đầu.
 - [ ] Hiệu ứng WebGL hero
 - [ ] Dark/light mode
 - [ ] i18n (VI/EN)
+
+## Polish (không chặn)
+- [ ] Viền khí quyển hành tinh: pha `#E84A8A` ở hai đầu lưỡi liềm (hiện solid `#CDE3FF`) — decision 0016
+- [ ] Hành tinh: pha `#E84A8A` chi tiết + ring (để dành, khó làm đúng)

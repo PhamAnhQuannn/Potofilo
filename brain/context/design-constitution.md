@@ -26,15 +26,21 @@ KIỂM TRA: phần tử mới không kể được nguồn gốc từ vụ nổ 
 KIỂM TRA màu mới: "phần tử này đang sống hay đã nguội?" → chọn vùng tương ứng.
 CTA vàng luôn là điểm sáng nhất VÙNG NỘI DUNG; lõi thiên hà sáng nhất VÙNG NỀN.
 
-## Trụ 4 — Chiều sâu 5 lớp (đồng biến: gần hơn = nét + nhanh + ấm + phản ứng hơn)
+## Trụ 4 — Chiều sâu (đồng biến: gần hơn = nét + nhanh + ấm + phản ứng hơn)
+Tu chính v1.1 (decision 0016): tách "sao & bụi" — sao ở XA hàng năm ánh sáng (sau
+thiên thể, bị hành tinh che), bụi/than hồng là hạt GẦN camera (trước thiên thể).
 | Lớp | Gồm | Chất liệu | Chuyển động | Parallax |
 |---|---|---|---|---|
 | 1 Khí quyển | tinh vân sương, dải ngân hà | mềm, blur | thở 18–30s | 0.02 |
+| 1b Sao xa | sao 3 cấp (faint/mid/hero) | sắc, nhỏ | twinkle, trôi 0 | 0.02 |
 | 2 Thiên thể | hành tinh, trăng, lõi thiên hà | có hình + ánh sáng | trôi ~90s | 0.04 |
-| 3 Sao & bụi | sao 3 cấp, bụi, than hồng, sao băng | sắc | trôi 2–6px/s | 0.06–0.12 |
+| 3 Bụi gần | bụi, than hồng, sao băng | sắc | trôi 2–6px/s | 0.06–0.12 |
 | 4 Nội dung | tile bento | nét nhất, tối trên nền rực | float ±3px lệch pha | ngược 3px |
 | 5 Tương tác | CTA, hover, expand | ấm nhất | tức thì | theo chuột |
-- Vi phạm đồng biến (vd: lớp 1 chuyển động nhanh hơn lớp 3) = phá chiều sâu.
+- **Z-order vẽ:** tinh vân < sao xa < thiên thể < bụi/embers < tile < overlay.
+  Hành tinh PHẢI che sao nằm sau lưng (sao xuyên qua hành tinh = cờ đỏ cartoon).
+- Đồng biến: xa hơn = parallax nhỏ hơn (sao xa 0.02 < thiên thể 0.04 < bụi 0.06–0.12).
+- Vi phạm đồng biến (lớp xa nhanh hơn lớp gần) = phá chiều sâu.
 
 ## Trụ 5 — Phân cấp năng lượng theo thời gian
 - Big bang = 100, MỘT lần duy nhất (flash + shake chỉ ở đây)
