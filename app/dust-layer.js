@@ -27,6 +27,9 @@
   var meteor = { active: false, x: 0, y: 0, vx: 0, vy: 0, age: 0, len: 0 };
   var nextMeteor = 1e9;
   var nebTex = { left: null, rd: null, band: null }, galaxyCoreTex = null, texScheduled = false;
+  var planetTex = null, moonTex = null;
+  // Một nguồn sáng = lõi thiên hà (0.72W, 0.30H). Nắng song song, chuẩn hóa (screen-space).
+  var LIGHT_DIR = (function () { var x = 0.72 - 0.5, y = 0.30 - 0.5, m = Math.hypot(x, y); return { x: x / m, y: y / m }; })();
   var DEBUG = false; try { DEBUG = new URLSearchParams(location.search).has('debug'); } catch (e) {}
   var dbgAcc = 0, dbgN = 0;
 
@@ -52,7 +55,7 @@
     return fbm;
   }
 
-  function makeNebulaTexture(size, outerHex, coreHex, seed) {
+  function makeNebulaTexture(size, outerHex, coreHex, seed, bias) {
     var fbm = makeNoise(seed), cv = document.createElement('canvas'); cv.width = cv.height = size;
     var g = cv.getContext('2d'), img = g.createImageData(size, size), d = img.data;
     var outer = hexRGB(outerHex), core = hexRGB(coreHex);
@@ -66,6 +69,7 @@
         var falloff = 1 - smoothstep(0.55, 1.0, dist);
         var a = Math.pow(smoothstep(0.38, 0.78, v), 1.7) * falloff;
         var mix = smoothstep(0.45, 0.9, v);
+        if (bias) { var dot = (nx - 0.5) * LIGHT_DIR.x + (ny - 0.5) * LIGHT_DIR.y; mix = Math.max(0, Math.min(1, mix + bias * dot * 2)); } // lõi ấm nghiêng về nguồn sáng
         var i = (y * size + x) * 4;
         d[i] = outer.r + (core.r - outer.r) * mix;
         d[i + 1] = outer.g + (core.g - outer.g) * mix;
@@ -91,16 +95,81 @@
     g.globalAlpha = 1; return cv;
   }
 
+  function rampN(cols, t) {
+    t = Math.max(0, Math.min(1, t)); var n = cols.length - 1, f = t * n, i = Math.floor(f); if (i >= n) i = n - 1;
+    var fr = f - i, a = cols[i], b = cols[i + 1];
+    return { r: a.r + (b.r - a.r) * fr, g: a.g + (b.g - a.g) * fr, b: a.b + (b.b - a.b) * fr };
+  }
+
+  // Hành tinh/trăng — render 1 lần, quang học theo LIGHT_DIR (không shading đối xứng tâm)
+  function makePlanetTexture(size, opts) {
+    var fbm = makeNoise(opts.seed || 7), cv = document.createElement('canvas'); cv.width = cv.height = size;
+    var g = cv.getContext('2d'), img = g.createImageData(size, size), d = img.data;
+    var pal = opts.palette.map(hexRGB), vein = opts.vein ? hexRGB(opts.vein) : null;
+    var R = size / 2, cx = R, cy = R;
+    // Pass 1 — bands / mottling (ImageData 1 lượt)
+    for (var y = 0; y < size; y++) {
+      var ny = (y - cy) / R;
+      for (var x = 0; x < size; x++) {
+        var nx = (x - cx) / R, i = (y * size + x) * 4;
+        if (nx * nx + ny * ny > 1) { d[i + 3] = 0; continue; }
+        var xs = Math.sqrt(Math.max(1e-4, 1 - ny * ny)), sx = nx / xs; // bóp cầu
+        var v;
+        if (opts.isMoon) { v = fbm(nx * 3 + 5, ny * 3 + 5); }
+        else {
+          var band = Math.sin(ny * 9 * Math.PI + fbm(ny * 3, 0.5) * 2.5);
+          var twist = fbm(sx * 2, ny * 6) * 0.35;
+          v = (band * 0.6 + twist + 1.3) / 2.6;
+        }
+        var col = rampN(pal, v);
+        if (vein && !opts.isMoon && Math.abs(Math.sin(ny * 9 * Math.PI)) > 0.94) { col.r += (vein.r - col.r) * 0.5; col.g += (vein.g - col.g) * 0.5; col.b += (vein.b - col.b) * 0.5; }
+        d[i] = col.r; d[i + 1] = col.g; d[i + 2] = col.b; d[i + 3] = 255;
+      }
+    }
+    g.putImageData(img, 0, 0);
+    g.save(); g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.clip();
+    // Pass 2 — limb darkening (multiply 1.0 tâm → 0.55 rìa)
+    g.globalCompositeOperation = 'multiply';
+    var lg = g.createRadialGradient(cx, cy, 0, cx, cy, R);
+    lg.addColorStop(0, '#ffffff'); lg.addColorStop(0.7, '#c8c8c8'); lg.addColorStop(1, '#8c8c8c');
+    g.fillStyle = lg; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
+    // Pass 3 — terminator (dọc -LIGHT_DIR, lệch 15% về phía khuất)
+    g.globalCompositeOperation = 'source-over';
+    var litFrac = opts.isMoon ? 0.20 : 0.375, lx = LIGHT_DIR.x, ly = LIGHT_DIR.y;
+    var tg = g.createLinearGradient(cx + lx * R, cy + ly * R, cx - lx * R, cy - ly * R);
+    tg.addColorStop(0, 'rgba(5,5,15,0)');
+    tg.addColorStop(Math.max(0, litFrac - 0.1), 'rgba(5,5,15,0)');
+    tg.addColorStop(Math.min(1, litFrac + 0.15), 'rgba(5,5,15,0.72)');
+    tg.addColorStop(1, 'rgba(5,5,15,0.92)');
+    g.fillStyle = tg; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
+    // Pass 4 — viền khí quyển rìa PHÍA SÁNG
+    var la = Math.atan2(ly, lx);
+    function rim(w, op) { g.globalAlpha = op; g.lineWidth = w; g.strokeStyle = '#CDE3FF'; g.beginPath(); g.arc(cx, cy, R - w * 0.5, la - 1.2, la + 1.2); g.stroke(); }
+    rim(size * 0.012, 0.12); rim(size * 0.006, 0.25); rim(size * 0.003, 0.5);
+    // Pass 5 — specular gần nguồn sáng nhất (bỏ ở moon/máy yếu)
+    if (opts.specular && !opts.isMoon) {
+      var spx = cx + lx * R * 0.8, spy = cy + ly * R * 0.8;
+      var sg = g.createRadialGradient(spx, spy, 0, spx, spy, R * 0.12);
+      sg.addColorStop(0, 'rgba(255,244,214,0.25)'); sg.addColorStop(1, 'rgba(255,244,214,0)');
+      g.globalAlpha = 1; g.fillStyle = sg; g.beginPath(); g.arc(spx, spy, R * 0.12, 0, Math.PI * 2); g.fill();
+    }
+    g.globalAlpha = 1; g.restore();
+    return cv;
+  }
+
   // Xếp hàng idle: tinh vân → lõi (tuần tự, không song song)
   function scheduleTextures() {
     if (texScheduled) return; texScheduled = true;
     var TEX = isMobile ? 384 : 512;
     var idle = window.requestIdleCallback || function (cb) { return setTimeout(function () { cb(); }, 1); };
     var jobs = [];
-    jobs.push(function () { nebTex.left = makeNebulaTexture(TEX, '#7B2FBF', '#FF8C42', 101); });
+    jobs.push(function () { nebTex.left = makeNebulaTexture(TEX, '#7B2FBF', '#FF8C42', 101, 0.13); });
     if (!isMobile) jobs.push(function () { nebTex.rd = makeNebulaTexture(TEX, '#2E1A6E', '#4ECDC4', 202); });
     jobs.push(function () { nebTex.band = makeNebulaTexture(TEX, '#3A7BD5', '#E84A8A', 303); });
     jobs.push(function () { galaxyCoreTex = makeGalaxyCore(512); });
+    // thiên thể (sau tinh vân, tuần tự): hành tinh khí → trăng
+    jobs.push(function () { planetTex = makePlanetTexture(isMobile ? 640 : 1024, { palette: ['#1B1440', '#3A2E6E', '#7B2FBF', '#9a5fd0'], vein: '#E84A8A', specular: !isMobile, seed: 711 }); });
+    if (!isMobile) jobs.push(function () { moonTex = makePlanetTexture(256, { palette: ['#2A2A3E', '#4A4A66', '#6E6E8A'], isMoon: true, seed: 822 }); });
     (function run() { if (!jobs.length) return; var job = jobs.shift(); idle(function () { job(); run(); }); })();
   }
 
@@ -122,10 +191,23 @@
       ctx.drawImage(nebTex.band, -w / 2, -w / 2, w, w); ctx.restore();
     }
     ctx.globalCompositeOperation = 'source-over';
+    // Thiên thể (layer 2, parallax 0.04) — hành tinh + trăng trước lõi, dưới stars
+    if (planetTex) {
+      var pd = (isMobile ? 0.36 : 0.48) * W;
+      var pcx = 0.10 * W + px * 0.04 + 3 * Math.sin(time * (2 * Math.PI / 90));
+      var pcy = 1.05 * H + py * 0.04;
+      ctx.globalAlpha = 1; ctx.drawImage(planetTex, pcx - pd / 2, pcy - pd / 2, pd, pd);
+    }
+    if (moonTex) {
+      var md = 0.07 * W;
+      var mcx = 0.82 * W + px * 0.04 + 2 * Math.sin(time * (2 * Math.PI / 110));
+      var mcy = 0.22 * H + py * 0.04;
+      ctx.globalAlpha = 1; ctx.drawImage(moonTex, mcx - md / 2, mcy - md / 2, md, md);
+    }
     if (galaxyCoreTex) {                                 // lõi thiên hà — sáng nhất nền
       var gw = 36 / 100 * W;
       ctx.globalAlpha = Math.min(1, 0.92 * (1 + 0.08 * Math.sin(time * (2 * Math.PI / 12))));
-      ctx.save(); ctx.translate(0.72 * W + px * 0.02, 0.30 * H + py * 0.02); ctx.rotate(-24 * Math.PI / 180); ctx.scale(1, 0.6);
+      ctx.save(); ctx.translate(0.72 * W + px * 0.04, 0.30 * H + py * 0.04); ctx.rotate(-24 * Math.PI / 180); ctx.scale(1, 0.6);
       ctx.drawImage(galaxyCoreTex, -gw / 2, -gw / 2, gw, gw); ctx.restore();
     }
     ctx.globalAlpha = 1;

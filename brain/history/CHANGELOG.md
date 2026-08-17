@@ -3,6 +3,8 @@
 Append-only. Mới nhất trên cùng.
 
 ## 2026-08-17
+- Realistic Planets (report 0015): dust-layer.js `LIGHT_DIR` (lõi 0.72W/0.30H), `makePlanetTexture` 5 passes (bands fbm bóp cầu, limb darkening multiply, terminator linear -LIGHT_DIR lệch 15%, viền khí quyển 3 arc, specular). Hành tinh khí 1024²/640mob góc trái-dưới cắt 40% + trăng 256² phải-trên (bỏ mobile), sinh idle sau nebula tuần tự, vẽ layer2 parallax 0.04 trôi 90s TRƯỚC stars; core parallax→0.04. Tinh vân trái lightBias 0.13. Thứ tự lớp theo hiến pháp (thiên thể dưới sao) — lệch spec §1.1, ghi report. Nợ reduced-motion static (BƯỚC 2).
+- fix(alive): clamp galaxy-core globalAlpha ≤1 (commit 6bcd67f).
 - Hiến pháp thiết kế v1 (decision 0005): brain/context/design-constitution.md (5 trụ + floating + bất biến); CLAUDE.md luật cứng #0.
 - Nebula Structure (report 0014): dust-layer.js + value-noise/fBm `makeNoise`, `makeNebulaTexture` (fbm ngưỡng smoothstep + falloff), `makeGalaxyCore` (3 radial bake), `scheduleTextures` (requestIdleCallback tuần tự), `drawNebula` (screen composite + breathe/twinkle sim-time). Cụm sao `clusterCenters`/`clusterPlace` (gauss σ4vh, màu ấm) thay bandPoint; 2 hero neo cụm b/c. main.css nebula cũ ×0.4. Nợ: reduced-motion static canvas (BƯỚC 2). CHƯA duyệt tận mắt.
 
