@@ -667,8 +667,12 @@
     function markSeen() { try { sessionStorage.setItem('cosmic-intro-seen', '1'); } catch (e) {} }
     var webgl = false; try { var tc = document.createElement('canvas'); webgl = !!(window.WebGLRenderingContext && (tc.getContext('webgl') || tc.getContext('experimental-webgl'))); } catch (e) {}
 
-    // D3 reduced / D4 no-WebGL/THREE → bento tĩnh ngay, không intro, không dust (tinh vân tĩnh)
-    if (reduce || typeof THREE === 'undefined' || !webgl) { revealAllTiles(); activateAlive(); return; }
+    // D3 reduced / D4 no-WebGL/THREE → bento tĩnh ngay, không intro. Vũ trụ nền: reduced=tĩnh, no-WebGL=động.
+    if (reduce || typeof THREE === 'undefined' || !webgl) {
+      revealAllTiles(); activateAlive();
+      if (window.CosmicDust) { if (!reduce) CosmicDust.start(null); CosmicDust.enterAlive(); }
+      return;
+    }
 
     // D2 lần 2 trong phiên → bento ngay + dust + vũ trụ nền, không intro
     if (seen) { revealAllTiles(); activateAlive(); if (window.CosmicDust) { window.CosmicDust.start(null); if (CosmicDust.enterAlive) CosmicDust.enterAlive(); } return; }
