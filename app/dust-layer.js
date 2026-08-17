@@ -113,16 +113,17 @@
       for (var x = 0; x < size; x++) {
         var nx = (x - cx) / R, i = (y * size + x) * 4;
         if (nx * nx + ny * ny > 1) { d[i + 3] = 0; continue; }
-        var xs = Math.sqrt(Math.max(1e-4, 1 - ny * ny)), sx = nx / xs; // bóp cầu
+        var z = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny)); // độ phồng mặt cầu
+        var lat = Math.asin(Math.max(-1, Math.min(1, ny)));    // vĩ độ thật → sọc tự cong ở rìa
         var v;
         if (opts.isMoon) { v = fbm(nx * 3 + 5, ny * 3 + 5); }
         else {
-          var band = Math.sin(ny * 9 * Math.PI + fbm(ny * 3, 0.5) * 2.5);
-          var twist = fbm(sx * 2, ny * 6) * 0.35;
+          var band = Math.sin(lat * 9 + fbm(lat * 3, 0.5) * 2.5);
+          var twist = fbm(nx / Math.max(z, 0.15), lat * 6) * 0.35; // sọc nén dần về hai cực
           v = (band * 0.6 + twist + 1.3) / 2.6;
         }
         var col = rampN(pal, v);
-        if (vein && !opts.isMoon && Math.abs(Math.sin(ny * 9 * Math.PI)) > 0.94) { col.r += (vein.r - col.r) * 0.5; col.g += (vein.g - col.g) * 0.5; col.b += (vein.b - col.b) * 0.5; }
+        if (vein && !opts.isMoon && Math.abs(Math.sin(lat * 9)) > 0.94) { col.r += (vein.r - col.r) * 0.5; col.g += (vein.g - col.g) * 0.5; col.b += (vein.b - col.b) * 0.5; }
         d[i] = col.r; d[i + 1] = col.g; d[i + 2] = col.b; d[i + 3] = 255;
       }
     }
@@ -131,21 +132,23 @@
     // Pass 2 — limb darkening (multiply 1.0 tâm → 0.55 rìa)
     g.globalCompositeOperation = 'multiply';
     var lg = g.createRadialGradient(cx, cy, 0, cx, cy, R);
-    lg.addColorStop(0, '#ffffff'); lg.addColorStop(0.7, '#c8c8c8'); lg.addColorStop(1, '#8c8c8c');
+    lg.addColorStop(0, '#ffffff'); lg.addColorStop(0.7, '#c8c8c8'); lg.addColorStop(1, '#808080'); // rìa còn 0.5 độ sáng tâm
     g.fillStyle = lg; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
-    // Pass 3 — terminator (dọc -LIGHT_DIR, lệch 15% về phía khuất)
+    // Pass 3 — terminator (dọc -LIGHT_DIR, lệch 15% về phía khuất). Moon: mặt khuất không đen đặc.
     g.globalCompositeOperation = 'source-over';
     var litFrac = opts.isMoon ? 0.20 : 0.375, lx = LIGHT_DIR.x, ly = LIGHT_DIR.y;
+    var dk = opts.isMoon ? '22,22,42' : '5,5,15', dmax = opts.isMoon ? 0.85 : 0.92;
     var tg = g.createLinearGradient(cx + lx * R, cy + ly * R, cx - lx * R, cy - ly * R);
-    tg.addColorStop(0, 'rgba(5,5,15,0)');
-    tg.addColorStop(Math.max(0, litFrac - 0.1), 'rgba(5,5,15,0)');
-    tg.addColorStop(Math.min(1, litFrac + 0.15), 'rgba(5,5,15,0.72)');
-    tg.addColorStop(1, 'rgba(5,5,15,0.92)');
+    tg.addColorStop(0, 'rgba(' + dk + ',0)');
+    tg.addColorStop(Math.max(0, litFrac - 0.1), 'rgba(' + dk + ',0)');
+    tg.addColorStop(Math.min(1, litFrac + 0.15), 'rgba(' + dk + ',' + (dmax * 0.78).toFixed(2) + ')');
+    tg.addColorStop(1, 'rgba(' + dk + ',' + dmax + ')');
     g.fillStyle = tg; g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
-    // Pass 4 — viền khí quyển rìa PHÍA SÁNG
+    // Pass 4 — viền khí quyển rìa PHÍA SÁNG (moon: sáng + dày hơn để không thành chấm đen)
     var la = Math.atan2(ly, lx);
     function rim(w, op) { g.globalAlpha = op; g.lineWidth = w; g.strokeStyle = '#CDE3FF'; g.beginPath(); g.arc(cx, cy, R - w * 0.5, la - 1.2, la + 1.2); g.stroke(); }
-    rim(size * 0.012, 0.12); rim(size * 0.006, 0.25); rim(size * 0.003, 0.5);
+    if (opts.isMoon) { rim(size * 0.016, 0.35); rim(size * 0.010, 0.7); }
+    else { rim(size * 0.012, 0.12); rim(size * 0.006, 0.25); rim(size * 0.003, 0.5); }
     // Pass 5 — specular gần nguồn sáng nhất (bỏ ở moon/máy yếu)
     if (opts.specular && !opts.isMoon) {
       var spx = cx + lx * R * 0.8, spy = cy + ly * R * 0.8;
