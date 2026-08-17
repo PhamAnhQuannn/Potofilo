@@ -26,10 +26,110 @@
   var starSeeds = null, bentoEl = null;
   var meteor = { active: false, x: 0, y: 0, vx: 0, vy: 0, age: 0, len: 0 };
   var nextMeteor = 1e9;
+  var nebTex = { left: null, rd: null, band: null }, galaxyCoreTex = null, texScheduled = false;
   var DEBUG = false; try { DEBUG = new URLSearchParams(location.search).has('debug'); } catch (e) {}
   var dbgAcc = 0, dbgN = 0;
 
   function rand(a, b) { return a + Math.random() * (b - a); }
+  function smoothstep(e0, e1, x) { var t = Math.max(0, Math.min(1, (x - e0) / (e1 - e0))); return t * t * (3 - 2 * t); }
+  function hexRGB(h) { return { r: parseInt(h.slice(1, 3), 16), g: parseInt(h.slice(3, 5), 16), b: parseInt(h.slice(5, 7), 16) }; }
+
+  // ---- value-noise + fBm (sinh texture 1 lần trong idle) ----
+  function makeNoise(seed) {
+    var p = new Uint8Array(256); for (var i = 0; i < 256; i++) p[i] = i;
+    var s = (seed >>> 0) || 1;
+    for (var j = 255; j > 0; j--) { s = (s * 1664525 + 1013904223) >>> 0; var k = s % (j + 1), t = p[j]; p[j] = p[k]; p[k] = t; }
+    function fade(x) { return x * x * x * (x * (x * 6 - 15) + 10); }
+    function val(ix, iy) { return p[(p[ix & 255] + (iy & 255)) & 255] / 255; }
+    function vn(x, y) {
+      var xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+      var u = fade(xf), v = fade(yf);
+      var a = val(xi, yi) + u * (val(xi + 1, yi) - val(xi, yi));
+      var b = val(xi, yi + 1) + u * (val(xi + 1, yi + 1) - val(xi, yi + 1));
+      return a + v * (b - a);
+    }
+    function fbm(x, y) { var f = 0, amp = 0.5, freq = 1, nrm = 0; for (var o = 0; o < 4; o++) { f += amp * vn(x * freq, y * freq); nrm += amp; amp *= 0.5; freq *= 2; } return f / nrm; }
+    return fbm;
+  }
+
+  function makeNebulaTexture(size, outerHex, coreHex, seed) {
+    var fbm = makeNoise(seed), cv = document.createElement('canvas'); cv.width = cv.height = size;
+    var g = cv.getContext('2d'), img = g.createImageData(size, size), d = img.data;
+    var outer = hexRGB(outerHex), core = hexRGB(coreHex);
+    for (var y = 0; y < size; y++) {
+      var ny = y / size;
+      for (var x = 0; x < size; x++) {
+        var nx = x / size;
+        var n = fbm(nx * 4, ny * 4), n2 = fbm(nx * 10.8 + 31.4, ny * 10.8 + 47.2);
+        var v = n * 0.72 + n2 * 0.28;
+        var dist = Math.hypot(nx - 0.5, ny - 0.5) * 2;
+        var falloff = 1 - smoothstep(0.55, 1.0, dist);
+        var a = Math.pow(smoothstep(0.38, 0.78, v), 1.7) * falloff;
+        var mix = smoothstep(0.45, 0.9, v);
+        var i = (y * size + x) * 4;
+        d[i] = outer.r + (core.r - outer.r) * mix;
+        d[i + 1] = outer.g + (core.g - outer.g) * mix;
+        d[i + 2] = outer.b + (core.b - outer.b) * mix;
+        d[i + 3] = a * 255;
+      }
+    }
+    g.putImageData(img, 0, 0); return cv;
+  }
+
+  // Lõi thiên hà — 3 lớp radial đồng tâm, bake 1 lần (điểm sáng nhất nền)
+  function makeGalaxyCore(size) {
+    var cv = document.createElement('canvas'); cv.width = cv.height = size;
+    var g = cv.getContext('2d'), c = size / 2;
+    function radial(r, stops, op) {
+      var grd = g.createRadialGradient(c, c, 0, c, c, r);
+      for (var i = 0; i < stops.length; i++) grd.addColorStop(stops[i][0], stops[i][1]);
+      g.globalAlpha = op; g.fillStyle = grd; g.beginPath(); g.arc(c, c, r, 0, Math.PI * 2); g.fill();
+    }
+    radial(size * 0.50, [[0, '#7B2FBF'], [1, 'rgba(123,47,191,0)']], 0.16);          // quầng
+    radial(size * 0.28, [[0, '#FFC864'], [0.6, '#E84A8A'], [1, 'rgba(232,74,138,0)']], 0.28); // vành
+    radial(size * 0.16, [[0, '#FFE9C4'], [0.6, 'rgba(255,233,196,0)'], [1, 'rgba(255,233,196,0)']], 0.5); // lõi
+    g.globalAlpha = 1; return cv;
+  }
+
+  // Xếp hàng idle: tinh vân → lõi (tuần tự, không song song)
+  function scheduleTextures() {
+    if (texScheduled) return; texScheduled = true;
+    var TEX = isMobile ? 384 : 512;
+    var idle = window.requestIdleCallback || function (cb) { return setTimeout(function () { cb(); }, 1); };
+    var jobs = [];
+    jobs.push(function () { nebTex.left = makeNebulaTexture(TEX, '#7B2FBF', '#FF8C42', 101); });
+    if (!isMobile) jobs.push(function () { nebTex.rd = makeNebulaTexture(TEX, '#2E1A6E', '#4ECDC4', 202); });
+    jobs.push(function () { nebTex.band = makeNebulaTexture(TEX, '#3A7BD5', '#E84A8A', 303); });
+    jobs.push(function () { galaxyCoreTex = makeGalaxyCore(512); });
+    (function run() { if (!jobs.length) return; var job = jobs.shift(); idle(function () { job(); run(); }); })();
+  }
+
+  function drawTex(tex, cxF, cyF, sizeVw, rot, baseOp, phase) {
+    if (!tex) return;
+    var w = sizeVw / 100 * W, cx = cxF * W + px * 0.02, cy = cyF * H + py * 0.02;
+    ctx.globalAlpha = baseOp * (1 + 0.15 * Math.sin(time * (2 * Math.PI / 22) + phase));
+    ctx.save(); ctx.translate(cx, cy); if (rot) ctx.rotate(rot); ctx.drawImage(tex, -w / 2, -w / 2, w, w); ctx.restore();
+  }
+
+  function drawNebula() {
+    ctx.globalCompositeOperation = 'screen';
+    drawTex(nebTex.left, 0.30, 0.42, 52, 0, 0.62, 0);
+    drawTex(nebTex.rd, 0.92, 0.80, 44, 0, 0.55, 1.7);
+    if (nebTex.band) {                                   // dải: kéo giãn ×3/×0.6, rotate -24°
+      var w = 40 / 100 * W;
+      ctx.globalAlpha = 0.55 * (1 + 0.15 * Math.sin(time * (2 * Math.PI / 22) + 3.1));
+      ctx.save(); ctx.translate(W / 2 + px * 0.02, H / 2 + py * 0.02); ctx.rotate(-24 * Math.PI / 180); ctx.scale(3, 0.6);
+      ctx.drawImage(nebTex.band, -w / 2, -w / 2, w, w); ctx.restore();
+    }
+    ctx.globalCompositeOperation = 'source-over';
+    if (galaxyCoreTex) {                                 // lõi thiên hà — sáng nhất nền
+      var gw = 36 / 100 * W;
+      ctx.globalAlpha = 1 * (1 + 0.08 * Math.sin(time * (2 * Math.PI / 12)));
+      ctx.save(); ctx.translate(0.72 * W + px * 0.02, 0.30 * H + py * 0.02); ctx.rotate(-24 * Math.PI / 180); ctx.scale(1, 0.6);
+      ctx.drawImage(galaxyCoreTex, -gw / 2, -gw / 2, gw, gw); ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
 
   function makeDust(p, seed) {
     p.x = seed && seed.x != null ? seed.x : rand(0, W);
@@ -42,15 +142,8 @@
     return p;
   }
   function gauss() { return (Math.random() + Math.random() + Math.random() - 1.5); } // ~N(0,~0.5)
-  function bandPoint() {
-    // điểm trên trục dải (qua tâm, góc -24°) + lệch vuông góc gaussian σ≈12vh
-    var ang = -24 * Math.PI / 180, dx = Math.cos(ang), dy = Math.sin(ang);
-    var t = rand(-0.8, 0.8) * W, n = gauss() * 2 * (0.12 * H);
-    return { x: W / 2 + dx * t - dy * n, y: H / 2 + dy * t + dx * n };
-  }
-  function makeFaint(p, seed, onBand) {
+  function makeFaint(p, seed) {
     if (seed && seed.x != null) { p.x = seed.x; p.y = seed.y; }
-    else if (onBand) { var b = bandPoint(); p.x = b.x; p.y = b.y; }
     else { p.x = rand(0, W); p.y = rand(0, H); }
     p.tier = 'faint'; p.size = rand(0.6, 1.1); p.baseOp = rand(0.25, 0.5); p.twAmp = 0.15;
     p.color = STAR_COLORS[(Math.random() * STAR_COLORS.length) | 0];
@@ -95,13 +188,34 @@
   }
   function densityAt() { return 1 - 0.7 * Math.min(1, scrollY / docScroll); }
 
+  function clusterCenters() {
+    return [ { x: 0.30 * W, y: 0.42 * H },   // (a) trong tinh vân trái
+             { x: 0.62 * W, y: 0.50 * H },   // (b) trên dải chéo giữa-phải
+             { x: 0.72 * W, y: 0.30 * H } ]; // (c) gần lõi thiên hà
+  }
+  function clusterPlace(st, C) {
+    var c = C[(Math.random() * 3) | 0], sig = 0.04 * H;
+    st.x = c.x + gauss() * 2 * sig; st.y = c.y + gauss() * 2 * sig;
+    if (Math.random() < 0.6) st.color = '#FFE9C4'; // ấm hơn nền chung
+  }
   function initStars() {
     var nFaint = isMobile ? 90 : 200, nMid = isMobile ? 22 : 50, nHero = isMobile ? 4 : 9;
     nStars = nFaint + nMid + nHero; stars = new Array(nStars); var idx = 0;
+    var C = clusterCenters(), sig = 0.04 * H;
     // thứ tự [hero, mid, faint] để auto-reduce (giảm từ cuối) rớt faint trước, giữ hero
-    for (var h = 0; h < nHero; h++) stars[idx++] = makeHero({}, h < 3);
-    for (var m = 0; m < nMid; m++) stars[idx++] = makeMid({});
-    for (var f = 0; f < nFaint; f++) stars[idx++] = makeFaint({}, starSeeds && starSeeds[f] ? starSeeds[f] : null, Math.random() < 0.4);
+    for (var h = 0; h < nHero; h++) {
+      var hs = makeHero({}, h < 3);
+      if (h === 0) { hs.x = C[1].x + rand(0.03, 0.05) * W; hs.y = C[1].y + gauss() * 2 * sig; } // neo rìa cụm (b)
+      else if (h === 1) { hs.x = C[2].x - rand(0.03, 0.05) * W; hs.y = C[2].y + gauss() * 2 * sig; } // rìa cụm (c)
+      stars[idx++] = hs;
+    }
+    for (var m = 0; m < nMid; m++) { var ms = makeMid({}); if (Math.random() < 0.4) clusterPlace(ms, C); stars[idx++] = ms; }
+    for (var f = 0; f < nFaint; f++) {
+      var seed = starSeeds && starSeeds[f] ? starSeeds[f] : null;
+      var fs = makeFaint({}, seed);
+      if (!seed && Math.random() < 0.4) clusterPlace(fs, C);
+      stars[idx++] = fs;
+    }
   }
   function initEmbers() {
     nEmbers = isMobile ? 7 : 14; embers = new Array(nEmbers);
@@ -130,6 +244,9 @@
     ctx.clearRect(0, 0, W, H);
     var parallax = -scrollY * 0.25;
     var gmul = densityAt();
+
+    // ---- tinh vân texture + lõi thiên hà (lớp khí quyển, sau cùng lớp nền) ----
+    if (alive) drawNebula();
 
     // ---- stars (3 cấp) ----
     if (alive) {
@@ -262,7 +379,7 @@
   function enterAlive() {
     if (alive) return; alive = true;
     if (!canvas) { canvas = document.getElementById('dust-layer'); if (canvas) { ctx = canvas.getContext('2d'); resize(); } }
-    initStars(); initEmbers();
+    initStars(); initEmbers(); scheduleTextures();
     nextMeteor = time + rand(25, 40);
     bentoEl = document.querySelector('.bento');
     if (!isMobile) window.addEventListener('mousemove', onMouseParallax, { passive: true });

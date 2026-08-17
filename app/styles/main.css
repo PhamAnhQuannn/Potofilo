@@ -190,9 +190,10 @@ body.cosmic-alive .galaxy-band { opacity: var(--gb-op);
   transform: translate(-50%, -50%); transition: opacity 1.2s ease; }
 body.cosmic-alive .nebula-cloud {
   animation: nebula-breathe var(--nb-dur) ease-in-out infinite var(--nb-delay); }
+/* Gradient cũ = lớp khí quyển mềm SAU texture noise → giảm còn 40% */
 @keyframes nebula-breathe {
-  0%, 100% { opacity: var(--nb-op); }
-  50% { opacity: calc(var(--nb-op) * 1.35); } }
+  0%, 100% { opacity: calc(var(--nb-op) * 0.4); }
+  50% { opacity: calc(var(--nb-op) * 0.54); } }
 /* Cụm TRÁI (giữa cánh trái) — delay/dur chung để thở như 1 khối */
 .neb-l1 { width: 58vw; height: 58vw; left: 6vw;  top: 42vh; background: #7B2FBF; --nb-op: 0.22; --nb-dur: 22s; --nb-delay: 0s; }
 .neb-l2 { width: 34vw; height: 34vw; left: 14vw; top: 37vh; background: #E84A8A; --nb-op: 0.20; --nb-dur: 22s; --nb-delay: 0s; }
@@ -235,7 +236,7 @@ body.cosmic-intro-running #bento .tile { opacity: 0; }
   * { scroll-behavior: auto !important; }
   #bento .tile { transition: none; }
   /* Vũ trụ nền: tinh vân + dải đứng yên (giữ MÀU, chỉ tắt chuyển động), tắt float ô */
-  body.cosmic-alive .nebula-cloud { animation: none; opacity: var(--nb-op); }
+  body.cosmic-alive .nebula-cloud { animation: none; opacity: calc(var(--nb-op) * 0.4); }
   body.cosmic-alive .galaxy-band { animation: none; opacity: var(--gb-op); }
   body.cosmic-alive .tile.cosmic-crystallized { animation: none; }
 }

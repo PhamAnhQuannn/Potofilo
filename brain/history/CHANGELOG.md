@@ -2,6 +2,10 @@
 
 Append-only. Mới nhất trên cùng.
 
+## 2026-08-17
+- Hiến pháp thiết kế v1 (decision 0005): brain/context/design-constitution.md (5 trụ + floating + bất biến); CLAUDE.md luật cứng #0.
+- Nebula Structure (report 0014): dust-layer.js + value-noise/fBm `makeNoise`, `makeNebulaTexture` (fbm ngưỡng smoothstep + falloff), `makeGalaxyCore` (3 radial bake), `scheduleTextures` (requestIdleCallback tuần tự), `drawNebula` (screen composite + breathe/twinkle sim-time). Cụm sao `clusterCenters`/`clusterPlace` (gauss σ4vh, màu ấm) thay bandPoint; 2 hero neo cụm b/c. main.css nebula cũ ×0.4. Nợ: reduced-motion static canvas (BƯỚC 2). CHƯA duyệt tận mắt.
+
 ## 2026-08-15
 - Galaxy Boost (report 0013): tăng màu tĩnh ALIVE ~2.5–3×, giữ mọi timing. main.css: `--bg`→#07071A, `.vignette`, `.galaxy-band` (-24°, galaxy-breathe 30s ±25%), tinh vân 3 cụm 8 div (op 0.14–0.26, hai cánh, translate-centering), `.tile` gradient nền + border color-mix accent 28% + box-shadow rim/bóng/glow (glow qua box-shadow vì overflow:hidden clip ::before), hover border 40%. dust-layer.js: sao 3 cấp (faint 200/mid 50/hero 9; hero hai cánh + halo 2 lớp + glint 3 ngôi), 40% faint dọc dải (bandPoint gaussian σ12vh), embers 10→14/op0.14–0.24. reduced-motion: nebula+band tĩnh giữ màu. index.html +div. CHƯA duyệt tận mắt.
 - Nhãn hành tinh + vũ trụ nền ALIVE (report 0012): (A) `makePlanetLabels` trong hero-sphere.js — 7 nhãn `.planet-label` text từ `.tile__label`, màu accent (`tileColors[k].getHexString`), bám tâm hành tinh chiếu (projectToScreen + bán kính chiếu), `pl-blast` khi vỡ, destroy tức thì khi skip. (B) `dust-layer.js` viết lại: 1 canvas, 4 nhóm (dust/stars/embers/meteor), parallax chuột px/py lerp 0.04 (stars 0.02/dust 0.06/embers 0.12), bento parallax ±3px ngược chiều, sao băng 25–40s (1 vệt), auto-reduce P3.2 (dt>0.04×3 → giảm dust rồi stars, embers giữ), API mới `seedStars/enterAlive`. `activateAlive()` + `body.cosmic-alive` gate 4 tinh vân CSS thở + `tile-float` lệch pha (`--float-dur/delay`). Bật ở finishIntro + nhánh seen/reduced/no-webgl. `?debug` log frame-time. reduced-motion → tĩnh. main.css + index.html (4 div nebula). Reviewer 2 lần: no issues. CHƯA duyệt tận mắt.
