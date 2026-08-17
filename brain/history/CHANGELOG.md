@@ -3,6 +3,7 @@
 Append-only. Mới nhất trên cùng.
 
 ## 2026-08-17
+- Tu chính hiến pháp Trụ 4 v1.1 (decision 0016): tách sao xa (lớp 1b, sau thiên thể) khỏi bụi (lớp 3, trước). dust-layer.js đổi thứ tự vẽ: drawNebulaBg → stars → drawCelestials → dust/embers (hành tinh che sao sau lưng). Ràng buộc rìa hành tinh cách grid ≥40px (gridLeft-40-R / gridRight+40+R). constitution v1.1. Backlog polish viền khí quyển #E84A8A.
 - Realistic Planets (report 0015): dust-layer.js `LIGHT_DIR` (lõi 0.72W/0.30H), `makePlanetTexture` 5 passes (bands fbm bóp cầu, limb darkening multiply, terminator linear -LIGHT_DIR lệch 15%, viền khí quyển 3 arc, specular). Hành tinh khí 1024²/640mob góc trái-dưới cắt 40% + trăng 256² phải-trên (bỏ mobile), sinh idle sau nebula tuần tự, vẽ layer2 parallax 0.04 trôi 90s TRƯỚC stars; core parallax→0.04. Tinh vân trái lightBias 0.13. Thứ tự lớp theo hiến pháp (thiên thể dưới sao) — lệch spec §1.1, ghi report. Nợ reduced-motion static (BƯỚC 2).
 - fix(alive): clamp galaxy-core globalAlpha ≤1 (commit 6bcd67f).
 - Hiến pháp thiết kế v1 (decision 0005): brain/context/design-constitution.md (5 trụ + floating + bất biến); CLAUDE.md luật cứng #0.

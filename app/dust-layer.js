@@ -180,7 +180,8 @@
     ctx.save(); ctx.translate(cx, cy); if (rot) ctx.rotate(rot); ctx.drawImage(tex, -w / 2, -w / 2, w, w); ctx.restore();
   }
 
-  function drawNebula() {
+  // Lớp 1 — khí quyển (tinh vân texture). Vẽ TRƯỚC sao xa.
+  function drawNebulaBg() {
     ctx.globalCompositeOperation = 'screen';
     drawTex(nebTex.left, 0.30, 0.42, 52, 0, 0.62, 0);
     drawTex(nebTex.rd, 0.92, 0.80, 44, 0, 0.55, 1.7);
@@ -190,19 +191,24 @@
       ctx.save(); ctx.translate(W / 2 + px * 0.02, H / 2 + py * 0.02); ctx.rotate(-24 * Math.PI / 180); ctx.scale(3, 0.6);
       ctx.drawImage(nebTex.band, -w / 2, -w / 2, w, w); ctx.restore();
     }
-    ctx.globalCompositeOperation = 'source-over';
-    // Thiên thể (layer 2, parallax 0.04) — hành tinh + trăng trước lõi, dưới stars
+    ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
+  }
+
+  // Lớp 2 — thiên thể (hành tinh/trăng/lõi). Vẽ SAU sao xa → che sao sau lưng (decision 0016).
+  // Ràng buộc: rìa hành tinh cách bounding-box grid ≥ 40px (viewport hẹp cắt sâu hơn).
+  function drawCelestials() {
+    var gridLeft = Math.max(0, (W - 1200) / 2), gridRight = Math.min(W, (W + 1200) / 2);
     if (planetTex) {
-      var pd = (isMobile ? 0.36 : 0.48) * W;
-      var pcx = 0.10 * W + px * 0.04 + 3 * Math.sin(time * (2 * Math.PI / 90));
+      var pd = (isMobile ? 0.36 : 0.48) * W, pR = pd / 2;
+      var pcx = (gridLeft - 40 - pR) + px * 0.04 + 3 * Math.sin(time * (2 * Math.PI / 90)); // đĩa nằm trái grid ≥40px
       var pcy = 1.05 * H + py * 0.04;
-      ctx.globalAlpha = 1; ctx.drawImage(planetTex, pcx - pd / 2, pcy - pd / 2, pd, pd);
+      ctx.globalAlpha = 1; ctx.drawImage(planetTex, pcx - pR, pcy - pR, pd, pd);
     }
     if (moonTex) {
-      var md = 0.07 * W;
-      var mcx = 0.82 * W + px * 0.04 + 2 * Math.sin(time * (2 * Math.PI / 110));
+      var md = 0.07 * W, mR = md / 2;
+      var mcx = Math.max(0.82 * W, gridRight + 40 + mR) + px * 0.04 + 2 * Math.sin(time * (2 * Math.PI / 110));
       var mcy = 0.22 * H + py * 0.04;
-      ctx.globalAlpha = 1; ctx.drawImage(moonTex, mcx - md / 2, mcy - md / 2, md, md);
+      ctx.globalAlpha = 1; ctx.drawImage(moonTex, mcx - mR, mcy - mR, md, md);
     }
     if (galaxyCoreTex) {                                 // lõi thiên hà — sáng nhất nền
       var gw = 36 / 100 * W;
@@ -327,10 +333,10 @@
     var parallax = -scrollY * 0.25;
     var gmul = densityAt();
 
-    // ---- tinh vân texture + lõi thiên hà (lớp khí quyển, sau cùng lớp nền) ----
-    if (alive) drawNebula();
+    // ---- lớp 1: tinh vân texture (khí quyển) ----
+    if (alive) drawNebulaBg();
 
-    // ---- stars (3 cấp) ----
+    // ---- lớp 1b: sao xa (SAU thiên thể — sao ở xa hàng năm ánh sáng, bị hành tinh che) ----
     if (alive) {
       for (var s = 0; s < nStars; s++) {
         var st = stars[s];
@@ -355,7 +361,10 @@
       }
     }
 
-    // ---- dust ----
+    // ---- lớp 2: thiên thể (che sao sau lưng) ----
+    if (alive) drawCelestials();
+
+    // ---- lớp 3: dust (bụi gần camera, trước thiên thể) ----
     for (var i = 0; i < nDust; i++) {
       var p = dust[i];
       if (p.borrow) {
