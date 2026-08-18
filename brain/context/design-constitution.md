@@ -8,7 +8,7 @@
 
 ## Trụ 1 — Một câu chuyện: mọi thứ là vật chất từ vụ nổ
 Mọi phần tử thị giác phải trả lời được "nó từ đâu ra?" bằng câu chuyện big bang:
-- Tile = vật chất kết tinh · Bụi = 15% hạt thoát ly · Tinh vân = khí đã nguội
+- Tile = vật chất kết tinh · Bụi = 10% hạt thoát ly + 5% ngưng tụ thành hệ nền · Tinh vân = khí đã nguội
 - Sao = bầu trời seed từ intro · Hành tinh nền = vật chất ngưng tụ ở xa
 - Nhãn tile = tiếng vọng của nhãn hành tinh đã vỡ
 - **v2.0:** vụ nổ sinh ra TOÀN BỘ hệ — mây bừng sáng theo sóng xung kích (light
@@ -46,18 +46,21 @@ thiên thể, bị hành tinh che), bụi/than hồng là hạt GẦN camera (tr
 Parallax v1.2 (decision 0017): dãn phổ hệ số để lia chuột lộ chiều sâu rõ hơn.
 Bảng lớp v2.0 (decision 0018) — thêm mây thể tích 3 tấm + hệ Kepler, **xóa quy tắc
 "cách grid 40px"** (thay bằng: chỉ MẶT TỐI anchor ≤8% sáng được nằm sau grid).
+Tu chính v2.0.1 (decision 0019): dải hoàng đạo về MỘT lớp duy nhất (lớp 1); lõi
+thiên hà parallax 0.04; moon z LUÂN PHIÊN theo pha quỹ đạo.
 | Z (xa→gần) | Lớp | Parallax chuột |
 |---|---|---|
-| 1 | mây back / mid (khí quyển) + tinh vân + dải hoàng đạo | 0.02 / 0.05 |
+| 1 | mây back / mid (khí quyển) + tinh vân + **dải hoàng đạo (một lớp)** | 0.02 / 0.05 |
 | 2 | sao xa 3 cấp | 0.05 |
-| 3 | distant dot / rocky (Kepler xa) | 0.06 |
+| 3 | distant dot / rocky (Kepler xa) + **lõi thiên hà** | 0.06 / 0.04 |
 | 4 | ice (Kepler) | 0.07 |
-| 5 | dải hoàng đạo (đoạn sau grid) + lõi thiên hà | 0.03 |
-| 6 | anchor + moon (Kepler gần) — MẶT TỐI được sau grid | 0.08 |
+| 6 | anchor + moon (Kepler gần) — MẶT TỐI anchor được sau grid | 0.08 |
 | 7 | mây front (vệt mỏng vắt mép dưới anchor) | 0.11 |
 | 8 | đèn con trỏ · bụi (0.15) · than hồng (0.22) · sao băng | 0.15–0.22 |
 | 9 | GRID tile (nội dung) | ngược ≤6px + tilt 3D ±5° |
 | 10 | Tương tác: CTA/hover/expand | theo chuột |
+- **Moon z luân phiên (v2.0.1):** theo pha quỹ đạo — cung XA → moon vẽ SAU anchor
+  (bị che); cung GẦN → moon vẽ TRƯỚC anchor (transit). Là yêu cầu thi công B2.
 - Hành tinh PHẢI che sao sau lưng. Anchor: rim + vùng tán xạ sáng LUÔN ngoài grid;
   chỉ mặt tối (≤8% sáng) được chồng sau grid — kiểm contrast chữ không giảm.
 - Đồng biến: xa hơn = parallax nhỏ hơn.
@@ -89,8 +92,8 @@ Hệ nền chạy theo ĐỊNH LUẬT tham số, KHÔNG tích phân n-body:
 
 ## Công thức "floating" (áp cho mọi phần tử nội dung nổi)
 1. Tách nền: tối hơn nền rực xung quanh
-2. Bóng đổ sâu phía dưới
-3. Rim light 1px cạnh trên (ánh sao)
+2. Bóng đổ sâu (v2.0: lệch DƯỚI-TRÁI theo LIGHT_DIR)
+3. Rim gradient góc TRÊN-PHẢI theo LIGHT_DIR (v2.0.1 — đồng bộ Trụ 2 tile shade, không phải rim ngang generic)
 4. Vi chuyển động lệch pha (không hai phần tử nào đồng nhịp)
 5. Parallax tách lớp (nền ngược hướng nội dung)
 Thiếu 1 trong 5 → không đạt "floating".
@@ -132,3 +135,6 @@ Thiếu 1 trong 5 → không đạt "floating".
   năng lượng người-dùng trần 30. · v2.0 (0018): "MỘT hệ" — Kepler (Trụ 6), tile
   shade + khí hậu (Trụ 2/3), bảng lớp mây+hệ (Trụ 4), sự kiện-nội-dung 8 (Trụ 5),
   thiên thể là artwork (Trụ 1), phụ lục giải phẫu.
+- v2.0.1 (0019): dải hoàng đạo 1 lớp (lớp 1); lõi thiên hà parallax 0.04; moon z
+  luân phiên theo pha; Trụ 1 bụi = 10% thoát ly + 5% ngưng tụ; floating #3 rim
+  gradient góc trên-phải theo LIGHT_DIR.
