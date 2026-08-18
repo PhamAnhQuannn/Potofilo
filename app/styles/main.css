@@ -211,7 +211,9 @@ body.cosmic-alive .nebula-cloud {
 body.cosmic-alive .tile.cosmic-crystallized {
   animation: tile-float var(--float-dur, 7s) ease-in-out infinite var(--float-delay, 0s);
   transform-style: preserve-3d;
-  transition: transform 0.18s ease-out, box-shadow 0.3s ease;
+  /* V5: khí hậu thấm viền — JS set --climate-tint/--climate-pct khi ô trong vùng planet */
+  border-color: color-mix(in srgb, var(--accent) 28%, color-mix(in srgb, var(--climate-tint, transparent) var(--climate-pct, 7%), #141031));
+  transition: transform 0.18s ease-out, box-shadow 0.3s ease, border-color 0.8s ease;
   box-shadow: -10px 26px 50px -20px rgba(2,2,10,0.9),
               0 0 0 1px rgba(255,255,255,0.02),
               0 0 36px -6px color-mix(in srgb, var(--accent) 22%, transparent); }
