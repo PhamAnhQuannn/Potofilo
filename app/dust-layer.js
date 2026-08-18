@@ -35,6 +35,7 @@
   var cloudBack = null, cloudMid = null, cloudFront = null;                             // mây 3 tấm (procedural/ảnh)
   var corePulse = { active: false, start: 0 }, nextPulse = 1e9;            // xung lõi (sự kiện hiếm)
   var ORB = null, CLIM = null;             // tham số Kepler / Khí hậu (TUNE)
+  var aliveT = 0;                          // đồng hồ từ lúc vào ALIVE (light-echo mây so le)
   var anchorCX = -1e9, anchorCY = -1e9, anchorAR = 0;                      // vị trí+bán kính anchor (slingshot/khí hậu)
   // Bản đồ khí hậu: tâm+bán kính vùng + màu nhuộm (anchor teal · ice tím · rocky gỉ ẤM — ngoại lệ Trụ 3)
   var CLIMATE = [ { cx: -1e9, cy: -1e9, r: 0, col: [78, 205, 196] },   // anchor
@@ -257,10 +258,11 @@
     var cw = W * scale, ch = cw * (tex.height / tex.width);
     ctx.globalAlpha = op; ctx.drawImage(tex, W / 2 - cw / 2 + px * parF, cyF * H - ch / 2 + py * parF, cw, ch); ctx.globalAlpha = 1;
   }
-  function drawClouds() { // lớp 1: mây back/mid + front (front vệt mỏng)
-    drawCloudLayer(cloudBack, 0.42, 1.35, 0.5, 0.02);
-    drawCloudLayer(cloudMid, 0.58, 1.05, 0.42, 0.05);
-    drawCloudLayer(cloudFront, 0.86, 1.5, 0.28, 0.11);
+  function drawClouds() { // lớp 1: mây back/mid + front. B4 light-echo: fade-in SO LE khi vào ALIVE
+    var e0 = Math.max(0, Math.min(1, aliveT / 0.5)), e1 = Math.max(0, Math.min(1, (aliveT - 0.15) / 0.5)), e2 = Math.max(0, Math.min(1, (aliveT - 0.3) / 0.5));
+    drawCloudLayer(cloudBack, 0.42, 1.35, 0.5 * e0, 0.02);   // gần tâm sáng trước
+    drawCloudLayer(cloudMid, 0.58, 1.05, 0.42 * e1, 0.05);
+    drawCloudLayer(cloudFront, 0.86, 1.5, 0.28 * e2, 0.11);  // xa sáng sau
   }
 
   // Xếp hàng idle: tinh vân → lõi (tuần tự, không song song)
@@ -539,7 +541,7 @@
 
   function step(now) {
     if (!running) return;
-    var dt = Math.min((now - lastT) / 1000, 0.05); lastT = now; time += dt;
+    var dt = Math.min((now - lastT) / 1000, 0.05); lastT = now; time += dt; if (alive) aliveT += dt;
 
     // perf auto-reduce (P3.2): dt>0.04 liên tiếp 3 frame → giảm dust trước, stars sau, embers không giảm
     if (dt > 0.04) {
@@ -760,6 +762,7 @@
     if (!canvas) return;
     initOrbits(); initClimate(); initStars(); scheduleTextures(); tryLoadAssets();
     if (reduced) {                                        // reduced: chỉ vẽ tĩnh (không loop, listener, meteor, embers)
+      aliveT = 1;                                          // mây hiện đủ (không có loop tăng aliveT)
       window.addEventListener('resize', function () { resize(); renderReducedStatic(); }, { passive: true });
       renderReducedUntilLoaded();
       return;
