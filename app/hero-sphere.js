@@ -693,6 +693,28 @@
     var bounds = order.map(function (k) { return dur[k]; });
     var greet = makeGreeting(sphere, document.getElementById('cosmic-greet'), dur.void + dur.charge);
     var labels = makePlanetLabels(sphere, stage);
+    // B4-khai-sinh: hero gọi bridge dust-layer ở đúng mốc phase (không đụng buffer hạt tile)
+    var B4 = (B4ON && window.CosmicDust && CosmicDust.startPreAlive) ? { cl: [false, false, false], rv: {}, pre: false, pg: false } : null;
+    function b4tick(name, pt) {
+      if (!B4) return;
+      if (!B4.pre) { B4.pre = true; CosmicDust.startPreAlive(); }                 // void: mây tối 0.06 hiện sau cầu
+      if (name === 'charge' && !B4.pg) { B4.pg = true; CosmicDust.pregenTextures(); } // pregen texture (diệt pop)
+      if (name === 'explode') {                                                   // light echo: mây bừng gần→xa
+        if (!B4.cl[0] && pt >= 0.25) { B4.cl[0] = true; CosmicDust.cloudLight(0); }
+        if (!B4.cl[1] && pt >= 0.45) { B4.cl[1] = true; CosmicDust.cloudLight(1); }
+        if (!B4.cl[2] && pt >= 0.70) { B4.cl[2] = true; CosmicDust.cloudLight(2); }
+      }
+      if (name === 'cascade') {                                                   // thắp lần lượt nhỏ-trước
+        if (!B4.rv.distant && pt >= 0.0) { B4.rv.distant = true; CosmicDust.reveal('distant'); }
+        if (!B4.rv.rocky && pt >= 0.4) { B4.rv.rocky = true; CosmicDust.reveal('rocky'); }
+        if (!B4.rv.ice && pt >= 0.8) { B4.rv.ice = true; CosmicDust.reveal('ice'); }
+      }
+      if (name === 'crystallize') {                                              // anchor cuối + lõi sáng dần
+        var k = Math.min(1, pt / (sphere._dur.crystallize || 1.3));
+        CosmicDust.coreEnergy(0.6 + 0.4 * k);
+        if (!B4.rv.anchor && k >= 0.7) { B4.rv.anchor = true; CosmicDust.reveal('anchor'); }
+      }
+    }
 
     var flash = document.getElementById('ci-flash-overlay');
     var skipBtn = document.getElementById('skip-intro');
@@ -716,6 +738,7 @@
         if (target >= order.length) { finishIntro(false); return; }
         if (target !== phaseI) { phaseI = target; sphere.setPhase(order[phaseI]); if (order[phaseI] === 'explode') greet.destroy(); }
         greet.update(elapsed);
+        b4tick(order[phaseI], sphere.phaseTime);
       }
       origUpdate(dt);
       if (!finished) labels.update(dt);

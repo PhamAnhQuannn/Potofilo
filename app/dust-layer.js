@@ -794,6 +794,7 @@
     ctx = canvas.getContext('2d'); resize();
     updateCorePos(); initLight(); initOrbits(); initClimate();
     if (!heroGlowTex) heroGlowTex = makeHeroGlow();
+    scheduleTextures();                                   // bake sớm → VOID có mây (diệt pop)
     preAlive = true; startLoop();
   }
 
