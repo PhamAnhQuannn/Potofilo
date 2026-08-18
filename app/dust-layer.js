@@ -32,8 +32,12 @@
   var nebTex = { left: null, rd: null, band: null }, galaxyCoreTex = null, texScheduled = false;
   var bandsTex = null, shadeTex = null, moonTex = null, iceTex = null, rockyTex = null; // thiên thể
   var corePulse = { active: false, start: 0 }, nextPulse = 1e9;            // xung lõi (sự kiện hiếm)
-  var ORB = null;                          // tham số quỹ đạo Kepler (TUNE nhóm "Quỹ đạo")
+  var ORB = null, CLIM = null;             // tham số Kepler / Khí hậu (TUNE)
   var anchorCX = -1e9, anchorCY = -1e9, anchorAR = 0;                      // vị trí+bán kính anchor (slingshot/khí hậu)
+  // Bản đồ khí hậu: tâm+bán kính vùng + màu nhuộm (anchor teal · ice tím · rocky gỉ ẤM — ngoại lệ Trụ 3)
+  var CLIMATE = [ { cx: -1e9, cy: -1e9, r: 0, col: [78, 205, 196] },   // anchor
+                  { cx: -1e9, cy: -1e9, r: 0, col: [123, 111, 208] },  // ice
+                  { cx: -1e9, cy: -1e9, r: 0, col: [196, 128, 64] } ]; // rocky (ấm)
   // Một nguồn sáng = lõi thiên hà (0.72W, 0.30H). Nắng song song, chuẩn hóa (screen-space).
   var LIGHT_DIR = (function () { var x = 0.72 - 0.5, y = 0.30 - 0.5, m = Math.hypot(x, y); return { x: x / m, y: y / m }; })();
   var DEBUG = false; try { DEBUG = new URLSearchParams(location.search).has('debug'); } catch (e) {}
@@ -282,6 +286,24 @@
       Tm: TP(G, 'T_moon', { value: 150, min: 60, max: 300, step: 5, label: 'Chu kỳ trăng (s)' })
     };
   }
+  function initClimate() {
+    if (CLIM) return; var G = 'Khí hậu';
+    CLIM = {
+      radius: TP(G, 'radius', { value: 1.75, min: 1, max: 3, step: 0.05, label: 'Bán kính vùng (×D)' }),
+      halo: TP(G, 'halo', { value: 0.06, min: 0, max: 0.12, step: 0.005, label: 'Opacity quầng tint' }),
+      dustLerp: TP(G, 'dustLerp', { value: 0.30, min: 0, max: 0.6, step: 0.02, label: '% lerp màu bụi' })
+    };
+  }
+  function drawClimateHalos() { // quầng tint màu hành tinh loang vào không gian (bám vị trí Kepler(t))
+    if (!CLIM) return;
+    for (var k = 0; k < 3; k++) {
+      var c = CLIMATE[k]; if (c.r <= 0) continue;
+      var pre = 'rgba(' + c.col[0] + ',' + c.col[1] + ',' + c.col[2];
+      var g = ctx.createRadialGradient(c.cx, c.cy, 0, c.cx, c.cy, c.r);
+      g.addColorStop(0, pre + ',' + CLIM.halo.value + ')'); g.addColorStop(1, pre + ',0)');
+      ctx.globalAlpha = 1; ctx.fillStyle = g; ctx.beginPath(); ctx.arc(c.cx, c.cy, c.r, 0, Math.PI * 2); ctx.fill();
+    }
+  }
   function solveKepler(M, e) { var E = M; for (var i = 0; i < 5; i++) E = E - (E - e * Math.sin(E) - M) / (1 - e * Math.cos(E)); return E; }
   function keplerPos(a, period, phase) { // vị trí = HÀM giải tích của time (an toàn throttle/tua)
     var e = ORB.ecc.value, M = 2 * Math.PI * (((time / period) + phase) % 1), E = solveKepler(M, e);
@@ -310,12 +332,20 @@
       ctx.drawImage(galaxyCoreTex, -gw / 2, -gw / 2, gw, gw); ctx.restore();
       drawCorePulse(gcx, gcy, gw);
     }
-    // xa → gần: distant, rocky, ice
-    drawDistant(keplerPos(base, ORB.Td.value, 0.0));
-    if (!isMobile) { drawBody(rockyTex, keplerPos(1.7 * base, ORB.Tr.value, 0.35), 0.10 * W); drawBody(iceTex, keplerPos(2.9 * base, ORB.Ti.value, 0.70), 0.14 * W); }
-    // anchor (Kepler) + moon (quay quanh anchor, z LUÂN PHIÊN theo pha — v2.0.1)
+    // vị trí Kepler (xa→gần) + cập nhật bản đồ khí hậu (bám Kepler(t), không bake tọa độ)
     var pa = keplerPos(aA, ORB.Ta.value, ORB.anchorPh.value);
     anchorCX = pa.x; anchorCY = pa.y; var pd = (isMobile ? 0.36 : 0.48) * W; anchorAR = pd / 2;
+    var cr = CLIM ? CLIM.radius.value : 1.75;
+    CLIMATE[0].cx = anchorCX; CLIMATE[0].cy = anchorCY; CLIMATE[0].r = cr * pd;
+    var pRock, pIce;
+    if (!isMobile) {
+      pRock = keplerPos(1.7 * base, ORB.Tr.value, 0.35); pIce = keplerPos(2.9 * base, ORB.Ti.value, 0.70);
+      CLIMATE[1].cx = pIce.x; CLIMATE[1].cy = pIce.y; CLIMATE[1].r = cr * 0.14 * W;
+      CLIMATE[2].cx = pRock.x; CLIMATE[2].cy = pRock.y; CLIMATE[2].r = cr * 0.10 * W;
+    }
+    drawClimateHalos();                                  // quầng tint (sau lõi, trước thiên thể)
+    drawDistant(keplerPos(base, ORB.Td.value, 0.0));
+    if (!isMobile) { drawBody(rockyTex, pRock, 0.10 * W); drawBody(iceTex, pIce, 0.14 * W); }
     var mAng = 2 * Math.PI * ((time / ORB.Tm.value) % 1), moonFront = Math.sin(mAng) > 0;
     var t = ORB.tilt.value * Math.PI / 180, ca = Math.cos(t), sa = Math.sin(t);
     var mrx = Math.cos(mAng) * anchorAR * 1.5, mry = Math.sin(mAng) * anchorAR * 1.5 * ORB.incline.value;
@@ -350,6 +380,7 @@
     p.vx = Math.cos(ang) * spd; p.vy = Math.sin(ang) * spd;
     p.size = rand(1, 2.5); p.baseOp = rand(0.15, 0.4);
     p.color = DUST_COLORS[(Math.random() * DUST_COLORS.length) | 0];
+    p.rgb = hexRGB(p.color); p.tint = 0; p.tcol = p.rgb; // khí hậu màu (lerp về màu vùng)
     p.tw = Math.random() * Math.PI * 2; p.borrow = null;
     return p;
   }
@@ -531,7 +562,19 @@
       var dtw = Math.sin(time * 1.5 + p.tw) * 0.05;
       var dop = Math.max(0, Math.min(0.4, (p.baseOp + dtw) * gmul));
       if (dop <= 0.01) continue;
-      ctx.globalAlpha = dop; ctx.fillStyle = p.color;
+      // khí hậu màu: dùng CHUNG distance với slingshot — bụi vào vùng lerp về màu vùng ≤30%
+      if (CLIM) {
+        var zt = null, zbest = 1e9;
+        for (var ci = 0; ci < 3; ci++) { var cz = CLIMATE[ci]; if (cz.r <= 0) continue; var zd = Math.hypot(p.x - cz.cx, dy - cz.cy); if (zd < cz.r && zd < zbest) { zbest = zd; zt = cz; } }
+        var want = zt ? CLIM.dustLerp.value * (1 - zbest / zt.r) : 0;
+        if (zt) p.tcol = zt.col;
+        p.tint += (want - p.tint) * Math.min(1, dt * 2);
+      }
+      if (p.tint > 0.01) {
+        var tr = p.rgb.r + (p.tcol[0] - p.rgb.r) * p.tint, tg = p.rgb.g + (p.tcol[1] - p.rgb.g) * p.tint, tb = p.rgb.b + (p.tcol[2] - p.rgb.b) * p.tint;
+        ctx.fillStyle = 'rgb(' + (tr | 0) + ',' + (tg | 0) + ',' + (tb | 0) + ')';
+      } else ctx.fillStyle = p.color;
+      ctx.globalAlpha = dop;
       ctx.beginPath(); ctx.arc(p.x + px * 0.15, dy, p.size, 0, Math.PI * 2); ctx.fill();
     }
 
@@ -643,7 +686,7 @@
     if (alive) return; alive = true;
     if (!canvas) { canvas = document.getElementById('dust-layer'); if (canvas) { ctx = canvas.getContext('2d'); resize(); } }
     if (!canvas) return;
-    initOrbits(); initStars(); scheduleTextures();
+    initOrbits(); initClimate(); initStars(); scheduleTextures();
     if (reduced) {                                        // reduced: chỉ vẽ tĩnh (không loop, listener, meteor, embers)
       window.addEventListener('resize', function () { resize(); renderReducedStatic(); }, { passive: true });
       renderReducedUntilLoaded();
