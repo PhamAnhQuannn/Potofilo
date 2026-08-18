@@ -361,7 +361,7 @@
     if (!corePulse.active) {
       if (time >= nextPulse && document.visibilityState === 'visible') {
         if (meteor.active || Math.abs(time - nextMeteor) < 1.5) { nextPulse = time + 3; return; } // hoãn nếu trùng sao băng
-        corePulse.active = true; corePulse.start = time;
+        corePulse.active = true; corePulse.start = time; buildPingTiles(gcx, gcy); // B6: cache tile để quét
       }
       return;
     }
@@ -371,6 +371,24 @@
     ctx.save(); ctx.translate(gcx, gcy); ctx.rotate(-24 * Math.PI / 180); ctx.scale(1, 0.6);
     ctx.globalAlpha = 1; ctx.strokeStyle = 'rgba(255,200,100,' + (0.06 * (1 - k)).toFixed(3) + ')'; ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.stroke(); ctx.restore();
+    pingTilesSweep(k);                                    // B6: sóng quét tile theo khoảng cách
+  }
+  var pingTiles = null;
+  function buildPingTiles(gcx, gcy) {
+    var els = document.querySelectorAll('#bento .tile.cosmic-crystallized');
+    pingTiles = []; var maxD = 1;
+    for (var i = 0; i < els.length; i++) { var r = els[i].getBoundingClientRect(); var cx = r.left + r.width / 2, cy = r.top + r.height / 2; var d = Math.hypot(cx - gcx, cy - gcy); maxD = Math.max(maxD, d); pingTiles.push({ el: els[i], d: d, pinged: false }); }
+    for (var j = 0; j < pingTiles.length; j++) pingTiles[j].maxD = maxD;
+  }
+  function pingTilesSweep(k) {
+    if (!pingTiles) return;
+    for (var i = 0; i < pingTiles.length; i++) {
+      var t = pingTiles[i]; if (t.pinged) continue;
+      if (k * t.maxD >= t.d) { // sóng lan tới tile này
+        t.pinged = true; t.el.classList.add('cosmic-ping');
+        (function (el) { setTimeout(function () { el.classList.remove('cosmic-ping'); }, 600); })(t.el); // thở 1 nhịp 0.6s
+      }
+    }
   }
 
   function makeDust(p, seed) {
