@@ -59,6 +59,7 @@
     var lx = coreX - W / 2, ly = coreY - H / 2, m = Math.hypot(lx, ly) || 1; LIGHT_DIR.x = lx / m; LIGHT_DIR.y = ly / m;
   }
   var DEBUG = false; try { DEBUG = new URLSearchParams(location.search).has('debug'); } catch (e) {}
+  var B4ON = true; try { B4ON = new URLSearchParams(location.search).get('b4') !== 'off'; } catch (e) {} // B4-khai-sinh (default ON; ?b4=off = bản an toàn)
   var dbgAcc = 0, dbgN = 0;
 
   function rand(a, b) { return a + Math.random() * (b - a); }

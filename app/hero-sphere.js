@@ -663,6 +663,7 @@
     var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     // Gate 1 lần/phiên; ?intro ép chạy lại (test). scrollRestoration fix vẫn giữ ở dưới.
     var forceIntro = false; try { forceIntro = new URLSearchParams(location.search).has('intro'); } catch (e) {}
+    var B4ON = true; try { B4ON = new URLSearchParams(location.search).get('b4') !== 'off'; } catch (e) {} // B4-khai-sinh (default ON)
     var seen = false; if (!forceIntro) { try { seen = sessionStorage.getItem('cosmic-intro-seen') === '1'; } catch (e) {} }
     function markSeen() { try { sessionStorage.setItem('cosmic-intro-seen', '1'); } catch (e) {} }
     var webgl = false; try { var tc = document.createElement('canvas'); webgl = !!(window.WebGLRenderingContext && (tc.getContext('webgl') || tc.getContext('experimental-webgl'))); } catch (e) {}
