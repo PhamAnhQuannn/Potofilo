@@ -30,7 +30,9 @@
   var meteor = { active: false, x: 0, y: 0, vx: 0, vy: 0, age: 0, len: 0 };
   var nextMeteor = 1e9;
   var nebTex = { left: null, rd: null, band: null }, galaxyCoreTex = null, texScheduled = false;
-  var bandsTex = null, shadeTex = null, moonTex = null, iceTex = null, rockyTex = null; // thiên thể
+  var bandsTex = null, shadeTex = null, moonTex = null, iceTex = null, rockyTex = null; // thiên thể (procedural fallback)
+  var imgAnchor = null, imgIce = null, imgRocky = null, imgMoon = null;                 // ảnh thật (nếu có)
+  var cloudBack = null, cloudMid = null, cloudFront = null;                             // mây 3 tấm (procedural/ảnh)
   var corePulse = { active: false, start: 0 }, nextPulse = 1e9;            // xung lõi (sự kiện hiếm)
   var ORB = null, CLIM = null;             // tham số Kepler / Khí hậu (TUNE)
   var anchorCX = -1e9, anchorCY = -1e9, anchorAR = 0;                      // vị trí+bán kính anchor (slingshot/khí hậu)
@@ -218,6 +220,49 @@
     ctx.drawImage(shadeTex, dx, dy, pd, pd);
   }
 
+  // B1 — asset loader (app/assets/celestial/*): có ảnh → dùng, thiếu → procedural fallback
+  function loadImg(url, cb) { var im = new Image(); im.onload = function () { cb(im); }; im.onerror = function () { cb(null); }; im.src = url; }
+  function tryLoadAssets() {
+    var base = './assets/celestial/';
+    loadImg(base + 'anchor.webp', function (i) { imgAnchor = i; });
+    if (!isMobile) {
+      loadImg(base + 'ice.webp', function (i) { imgIce = i; });
+      loadImg(base + 'rocky.webp', function (i) { imgRocky = i; });
+      loadImg(base + 'moon.webp', function (i) { imgMoon = i; });
+      loadImg(base + 'cloud-back.webp', function (i) { if (i) cloudBack = i; });
+      loadImg(base + 'cloud-mid.webp', function (i) { if (i) cloudMid = i; });
+    }
+    loadImg(base + 'cloud-front.webp', function (i) { if (i) cloudFront = i; });
+  }
+
+  // Mây thể tích procedural (backlit teal-xanh) — fallback khi thiếu ảnh
+  function makeCloudTex(w, h, seed, density, outerHex, coreHex) {
+    var fbm = makeNoise(seed), cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+    var g = cv.getContext('2d'), img = g.createImageData(w, h), d = img.data;
+    var outer = hexRGB(outerHex), core = hexRGB(coreHex);
+    for (var y = 0; y < h; y++) {
+      var vy = y / h, edge = 1 - smoothstep(0.6, 1.0, Math.abs(vy - 0.5) * 2); // mờ dần mép trên/dưới
+      for (var x = 0; x < w; x++) {
+        var n = fbm(x / w * 6, y / h * 3), n2 = fbm(x / w * 13 + 9, y / h * 6 + 4), v = n * 0.7 + n2 * 0.3;
+        var a = Math.pow(smoothstep(0.45, 0.85, v), 1.6) * density * edge;
+        var mix = smoothstep(0.5, 0.9, v), i = (y * w + x) * 4;
+        d[i] = outer.r + (core.r - outer.r) * mix; d[i + 1] = outer.g + (core.g - outer.g) * mix; d[i + 2] = outer.b + (core.b - outer.b) * mix; d[i + 3] = a * 255;
+      }
+    }
+    g.putImageData(img, 0, 0); return cv;
+  }
+
+  function drawCloudLayer(tex, cyF, scale, op, parF) { // mây tĩnh gần, parallax theo lớp
+    if (!tex) return;
+    var cw = W * scale, ch = cw * (tex.height / tex.width);
+    ctx.globalAlpha = op; ctx.drawImage(tex, W / 2 - cw / 2 + px * parF, cyF * H - ch / 2 + py * parF, cw, ch); ctx.globalAlpha = 1;
+  }
+  function drawClouds() { // lớp 1: mây back/mid + front (front vệt mỏng)
+    drawCloudLayer(cloudBack, 0.42, 1.35, 0.5, 0.02);
+    drawCloudLayer(cloudMid, 0.58, 1.05, 0.42, 0.05);
+    drawCloudLayer(cloudFront, 0.86, 1.5, 0.28, 0.11);
+  }
+
   // Xếp hàng idle: tinh vân → lõi (tuần tự, không song song)
   function scheduleTextures() {
     if (texScheduled) return; texScheduled = true;
@@ -237,6 +282,12 @@
       jobs.push(function () { iceTex = makePlanetTexture(512, { palette: ['#1A1636', '#2E1A6E', '#3A7BD5', '#6E8FD0'], seed: 911 }); });     // ice: xanh-tím
       jobs.push(function () { rockyTex = makePlanetTexture(384, { palette: ['#241814', '#4A2E22', '#7A4A34'], isMoon: true, seed: 922 }); }); // rocky: gỉ ấm
     }
+    // mây 3 tấm procedural (bake nếu chưa có ảnh; ảnh load async sẽ override)
+    if (!isMobile) {
+      jobs.push(function () { if (!cloudBack) cloudBack = makeCloudTex(1024, 440, 401, 0.55, '#0A2630', '#1E6E7A'); });
+      jobs.push(function () { if (!cloudMid) cloudMid = makeCloudTex(1024, 440, 402, 0.5, '#0C2E3A', '#2DB0B0'); });
+    }
+    jobs.push(function () { if (!cloudFront) cloudFront = makeCloudTex(768, 300, 403, 0.3, '#123844', '#3AD0C4'); });
     (function run() { if (!jobs.length) return; var job = jobs.shift(); idle(function () { job(); run(); }); })();
   }
 
@@ -247,8 +298,9 @@
     ctx.save(); ctx.translate(cx, cy); if (rot) ctx.rotate(rot); ctx.drawImage(tex, -w / 2, -w / 2, w, w); ctx.restore();
   }
 
-  // Lớp 1 — khí quyển (tinh vân texture). Vẽ TRƯỚC sao xa.
+  // Lớp 1 — khí quyển (mây 3 tấm + tinh vân texture). Vẽ TRƯỚC sao xa.
   function drawNebulaBg() {
+    drawClouds();                                        // mây back/mid/front (B1) — nền xa nhất
     ctx.globalCompositeOperation = 'screen';
     drawTex(nebTex.left, 0.30, 0.42, 52, 0, 0.62, 0);
     drawTex(nebTex.rd, 0.92, 0.80, 44, 0, 0.55, 1.7);
@@ -345,14 +397,16 @@
     }
     drawClimateHalos();                                  // quầng tint (sau lõi, trước thiên thể)
     drawDistant(keplerPos(base, ORB.Td.value, 0.0));
-    if (!isMobile) { drawBody(rockyTex, pRock, 0.10 * W); drawBody(iceTex, pIce, 0.14 * W); }
+    if (!isMobile) { drawBody(imgRocky || rockyTex, pRock, 0.10 * W); drawBody(imgIce || iceTex, pIce, 0.14 * W); } // ảnh thật || procedural
     var mAng = 2 * Math.PI * ((time / ORB.Tm.value) % 1), moonFront = Math.sin(mAng) > 0;
     var t = ORB.tilt.value * Math.PI / 180, ca = Math.cos(t), sa = Math.sin(t);
     var mrx = Math.cos(mAng) * anchorAR * 1.5, mry = Math.sin(mAng) * anchorAR * 1.5 * ORB.incline.value;
     var moonX = anchorCX + (mrx * ca - mry * sa), moonY = anchorCY + (mrx * sa + mry * ca), md = 0.07 * W;
-    if (moonTex && !moonFront) drawBody(moonTex, { x: moonX, y: moonY }, md); // cung XA: sau anchor
-    if (bandsTex) drawPlanetRot(anchorCX, anchorCY, pd);                       // anchor: sọc quay 140s + shade
-    if (moonTex && moonFront) drawBody(moonTex, { x: moonX, y: moonY }, md);   // cung GẦN: trước anchor = transit
+    var moonG = imgMoon || moonTex;
+    if (moonG && !moonFront) drawBody(moonG, { x: moonX, y: moonY }, md);      // cung XA: sau anchor
+    if (imgAnchor) drawBody(imgAnchor, { x: anchorCX, y: anchorCY }, pd);       // ảnh thật (tĩnh)
+    else if (bandsTex) drawPlanetRot(anchorCX, anchorCY, pd);                   // procedural: sọc quay 140s + shade
+    if (moonG && moonFront) drawBody(moonG, { x: moonX, y: moonY }, md);        // cung GẦN: trước anchor = transit
     ctx.globalAlpha = 1;
   }
 
@@ -704,7 +758,7 @@
     if (alive) return; alive = true;
     if (!canvas) { canvas = document.getElementById('dust-layer'); if (canvas) { ctx = canvas.getContext('2d'); resize(); } }
     if (!canvas) return;
-    initOrbits(); initClimate(); initStars(); scheduleTextures();
+    initOrbits(); initClimate(); initStars(); scheduleTextures(); tryLoadAssets();
     if (reduced) {                                        // reduced: chỉ vẽ tĩnh (không loop, listener, meteor, embers)
       window.addEventListener('resize', function () { resize(); renderReducedStatic(); }, { passive: true });
       renderReducedUntilLoaded();

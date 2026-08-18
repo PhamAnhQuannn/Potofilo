@@ -20,5 +20,7 @@ Việc chờ làm. Kéo lên STATE.md khi bắt đầu.
 - [ ] i18n (VI/EN)
 
 ## Polish (không chặn)
+- [ ] Distant dot xuyên khe grid: tính cung Kepler qua gap thực (14px) ở runtime (B5 hạ cấp — hiện hiện qua khe tự nhiên do z-order)
+- [ ] Khí hậu-viền-tile: pha 5–8% màu vùng vào accent (B6 hoãn — planet Kepler trôi nên gán tĩnh vô nghĩa; cần cách bám động)
 - [ ] Viền khí quyển hành tinh: pha `#E84A8A` ở hai đầu lưỡi liềm (hiện solid `#CDE3FF`) — decision 0016
 - [ ] Hành tinh: pha `#E84A8A` chi tiết + ring (để dành, khó làm đúng)
