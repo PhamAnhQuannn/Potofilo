@@ -84,8 +84,8 @@ Ký hiệu: ✅ đạt · 🔧 đã sửa · ⚠️ cần người dùng quyết
 ### Dọn dẹp
 | Mục | KQ | Ghi chú |
 |---|---|---|
-| `app/intro/` legacy đã xóa | ⚠️ | CÒN 5 file (prototype cũ, không dùng) — cần-quyết |
-| `site.js` đã xóa | ⚠️ | CÒN + include `index.html:162` (no-op) — cần-quyết |
+| `app/intro/` legacy đã xóa | 🔧 | ĐÃ XÓA (5 file) — git history giữ |
+| `site.js` đã xóa | 🔧 | ĐÃ XÓA + bỏ include index.html — git history giữ |
 | aria-hidden đúng | ✅ | canvas/nebula/stage `aria-hidden` |
 | Link không hỏng | 📝 | 7 `href="[...]"` = nội dung chờ điền (không phải bug) |
 
@@ -103,12 +103,12 @@ Ký hiệu: ✅ đạt · 🔧 đã sửa · ⚠️ cần người dùng quyết
 | **B4 thiếu light-echo + 5% ngưng tụ** | Trụ 1 | backlog "B4-đầy-đủ". ĐIỀU KIỆN: có vòng duyệt mắt trực tiếp khi đụng intro (WebGL, rủi ro, env không render). |
 
 ## 4. Cần người dùng quyết
-| Việc | Vì sao chờ |
+| Việc | Trạng thái |
 |---|---|
-| Xóa `app/intro/` + `site.js` (bỏ include) | Là code legacy no-op; xóa = đổi hành vi include → không tự quyết |
-| TUNE chỉ 2 nhóm (thiếu "Ánh sáng tile") | B6 tile shade là CSS thuần, không tham số runtime. Muốn expose rim/shadow qua CSS var + TUNE? |
-| Ảnh `app/assets/celestial/` | Chưa có file → procedural fallback. Thả ảnh (README) để dùng artwork thật |
-| Điền 7 nội dung placeholder `[...]` | Nội dung thật của Quân |
+| ~~Xóa `app/intro/` + `site.js`~~ | ✅ DONE (dọn dẹp, git history giữ) |
+| ~~TUNE thiếu nhóm~~ | ✅ DONE — nhóm **"Ánh sáng"** thêm ở V6 Chiaroscuro (7 slider) |
+| Ảnh `app/assets/celestial/` | ⏳ CHỜ: thả ảnh (README) để dùng artwork thật; nay procedural |
+| Điền 7 nội dung placeholder `[...]` | ⏳ CHỜ: nội dung thật của Quân |
 
 ## 5. Bảng backlog (đồng bộ STATE.md + backlog.md)
 | Hạng | Việc |
@@ -124,7 +124,7 @@ Ký hiệu: ✅ đạt · 🔧 đã sửa · ⚠️ cần người dùng quyết
 - **Ảnh thiếu → procedural:** `tryLoadAssets` `onerror`→null; draw dùng `imgX || texX`
   (anchor: `if(imgAnchor) else drawPlanetRot`; cloud: `if(!cloudX) bake`). Mọi thiên
   thể + 3 mây có fallback riêng ✅. (Không có ảnh nào hiện tại → toàn procedural, không lỗi console.)
-- **TUNE nhóm:** THỰC TẾ 2 nhóm sống (Quỹ đạo, Khí hậu). "Ánh sáng tile" chưa có (§4).
+- **TUNE nhóm:** 3 nhóm sống (Quỹ đạo, Khí hậu, **Ánh sáng** — thêm V6 Chiaroscuro).
 - **Reduced-motion:** `renderReducedStatic` vẽ mây (aliveT=1) + nebula + hệ Kepler tĩnh ✅.
 
 ## 7. Hiệu năng — CHƯA ĐO (env không chạy trình duyệt/canvas)
