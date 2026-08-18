@@ -15,7 +15,7 @@ Ký hiệu: ✅ đạt · 🔧 đã sửa · ⚠️ cần người dùng quyết
 | Mục | KQ | Ghi chú |
 |---|---|---|
 | Mọi phần tử kể được nguồn gốc | ✅ | tile/bụi/tinh vân/sao/hành tinh/nhãn đều có gốc |
-| Vụ nổ sinh TOÀN BỘ hệ (light-echo + 5% ngưng tụ) | ⛔ | B4 ship bản an toàn (mây fade-in so le khi ALIVE) — THIẾU light-echo theo sóng explode + 5% hạt ngưng tụ. Xem "Sai lệch treo" §3. |
+| Vụ nổ sinh TOÀN BỘ hệ (light-echo + 5% ngưng tụ) | 🔧 phần lớn | B4-khai-sinh bản bridge (895d36a, `?b4` default ON): hệ hình thành TRONG intro — light-echo mây theo sóng explode + reveal thiên thể theo cascade + lõi sáng dần → đóng "nhịp chết+pop+fade vô cớ". CÒN HOÃN: choreography 5% hạt WebGL ngưng tụ → backlog polish (cần tinh chỉnh mắt). |
 | Thiên thể được là artwork (palette+LIGHT_DIR) | ✅ | loader ảnh + procedural fallback |
 
 ### Trụ 2 — Một nguồn sáng
