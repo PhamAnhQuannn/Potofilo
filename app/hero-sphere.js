@@ -232,7 +232,7 @@
       var glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.sprite, color: col.clone(),
         transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, opacity: 0 }));
       glow.scale.set(1, 1, 1); this.scene.add(glow); this.pGlow.push(glow);
-      var rmesh = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.0, 48),
+      var rmesh = new THREE.Mesh(new THREE.RingGeometry(0.985, 1.0, 48),
         new THREE.MeshBasicMaterial({ color: col.clone(), transparent: true, opacity: 0,
           blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
       rmesh.visible = false; this.scene.add(rmesh); this.pRing.push(rmesh);
