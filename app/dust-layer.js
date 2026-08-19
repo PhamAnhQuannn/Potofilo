@@ -65,7 +65,7 @@
   var coreEnergyV = 1, coreEnergyTarget = 1;
   var CLOUD_BASE = [0.5, 0.42, 0.28], cloudLit = [0.5, 0.42, 0.28];  // opacity mây (B4: bắt đầu 0.06)
   var preAlive = false;
-  if (B4ON) { revealA = { distant: 0, rocky: 0, ice: 0, anchor: 0 }; revealT = { distant: 0, rocky: 0, ice: 0, anchor: 0 }; coreEnergyV = 0.6; coreEnergyTarget = 0.6; cloudLit = [0.06, 0.06, 0.06]; }
+  if (B4ON) { revealA = { distant: 0, rocky: 0, ice: 0, anchor: 0 }; revealT = { distant: 0, rocky: 0, ice: 0, anchor: 0 }; coreEnergyV = 0.1; coreEnergyTarget = 0.1; cloudLit = [0.06, 0.06, 0.06]; }
   var dbgAcc = 0, dbgN = 0;
 
   function rand(a, b) { return a + Math.random() * (b - a); }
