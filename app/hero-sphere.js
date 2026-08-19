@@ -322,6 +322,7 @@
   CosmicSphere.prototype._breakPlanet = function (k) {
     var P = this.planets[k], N = this.count, pos = this.positions, vel = this.vel;
     P.bcx = P.curCx; P.bcy = P.curCy; P.ringT = 0; P.flareT = 0;
+    P.broken = true;
     for (var i = 0; i < N; i++) {
       if (this.tileIdx[i] !== k) continue;
       var dx = pos[i * 3] - P.curCx, dy = pos[i * 3 + 1] - P.curCy, dz = pos[i * 3 + 2];
