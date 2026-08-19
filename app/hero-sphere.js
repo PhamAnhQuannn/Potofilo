@@ -705,15 +705,12 @@
         if (!B4.cl[1] && pt >= 0.45) { B4.cl[1] = true; CosmicDust.cloudLight(1); }
         if (!B4.cl[2] && pt >= 0.70) { B4.cl[2] = true; CosmicDust.cloudLight(2); }
       }
-      if (name === 'cascade') {                                                   // thắp lần lượt nhỏ-trước
-        if (!B4.rv.distant && pt >= 0.0) { B4.rv.distant = true; CosmicDust.reveal('distant'); }
-        if (!B4.rv.rocky && pt >= 0.4) { B4.rv.rocky = true; CosmicDust.reveal('rocky'); }
-        if (!B4.rv.ice && pt >= 0.8) { B4.rv.ice = true; CosmicDust.reveal('ice'); }
-      }
-      if (name === 'crystallize') {                                              // anchor cuối + lõi sáng dần
+      // KHÔNG reveal thiên thể nền trong intro: choreography hạt sys hoãn nên hành tinh nền
+      // (vị trí Kepler) sẽ đè lên hạt WebGL đang nổ (canvas trong suốt) → "hành tinh có sẵn".
+      // Hành tinh nền chỉ hiện ở ALIVE (enterAlive snap). preAlive = CHỈ mây.
+      if (name === 'crystallize') {                                              // lõi sáng dần (mây + lõi, không thiên thể)
         var k = Math.min(1, pt / (sphere._dur.crystallize || 1.3));
         CosmicDust.coreEnergy(0.6 + 0.4 * k);
-        if (!B4.rv.anchor && k >= 0.7) { B4.rv.anchor = true; CosmicDust.reveal('anchor'); }
       }
     }
 
