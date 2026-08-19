@@ -36,4 +36,6 @@ Khi bắt đầu một việc/thay đổi, lúc đánh giá tác động (xem `.
 ## Đang mở
 | # | Issue | Lộ ra từ | Ngày |
 |---|-------|----------|------|
-| _(trống)_ | | | |
+| 0003 | Chớp nội dung một nhịp lúc mở trang (FOUC) | Đo thật hoàn thiện fix giật (report 0021) | 2026-08-19 |
+| 0004 | Làm sẵn ảnh mây webp để khỏi vẽ lúc chạy | Đo thật hoàn thiện fix giật (report 0021) | 2026-08-19 |
+| 0005 | Làm nóng trước bộ vẽ "vòng" (giật lúc nổ?) | Đo thật hoàn thiện fix giật (report 0021) | 2026-08-19 |

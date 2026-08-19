@@ -135,13 +135,15 @@ body.cosmic-intro-running #cosmic-stage { display: block; }
 #cosmic-greet { position: absolute; left: 50%; top: 50%; z-index: 2;
   transform: translateX(-50%); white-space: nowrap; pointer-events: none;
   opacity: 1; transition: opacity 0.12s ease;
-  font-family: var(--font-body); font-weight: 300; font-size: 16px;
-  letter-spacing: 0.35em; text-transform: uppercase; color: #FFF4D6;
-  text-shadow: 0 0 24px rgba(255,200,100,0.35); }
+  font-family: var(--font-body); font-weight: 600; font-size: clamp(22px, 3.2vw, 38px);
+  letter-spacing: 0.3em; text-transform: uppercase; color: #FFFFFF;
+  text-shadow: 0 0 40px rgba(255,200,100,0.7), 0 0 80px rgba(255,140,66,0.4), 0 2px 12px rgba(0,0,0,0.9);
+  padding: 0 2.5em;
+  background: radial-gradient(ellipse 70% 180% at 50% 50%, rgba(5,5,16,0.5) 0%, transparent 100%); }
 #cosmic-greet.cg-swapout { opacity: 0; }
 #cosmic-greet .cg-char { display: inline-block; opacity: 0;
   transform: translateY(6px); will-change: transform, opacity, filter; }
-#cosmic-greet .cg-char.cg-in { opacity: 0.85; transform: translateY(0);
+#cosmic-greet .cg-char.cg-in { opacity: 1; transform: translateY(0);
   transition: opacity 0.3s ease, transform 0.3s ease; }
 #ci-flash-overlay { position: absolute; inset: 0; background: #FFFFFF; opacity: 0; }
 #skip-intro { position: fixed; top: 18px; right: 20px; z-index: 9999; pointer-events: auto;

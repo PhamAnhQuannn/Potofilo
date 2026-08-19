@@ -20,3 +20,5 @@ Mỗi file ở đây là **một bản báo cáo cho một việc hoàn chỉnh*
 | [0007](0007-qua-cau-hat-hero.md) | Quả cầu hạt "sống" trong hero (Giai đoạn 2) | 2026-08-15 |
 | [0008](0008-intro-noy-hanh-tinh-bui.md) | Vụ nổ auto-play + hành tinh + bụi (Giai đoạn 3) | 2026-08-15 |
 | [0009](0009-redesign-bento-khai-sinh.md) | Redesign: bento 1 màn hình + vụ nổ khai sinh | 2026-08-15 |
+| [0021](0021-do-that-va-hoan-thien-fix-giat-intro.md) | Đo thật rồi hoàn thiện chống giật lúc mở intro | 2026-08-19 |
+| [0022](0022-chunk-bake-texture-het-giat-i-am-quan.md) | Chia lát vẽ ảnh nền — hết giật ở "I'M QUAN" | 2026-08-19 |

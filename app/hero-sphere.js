@@ -65,6 +65,7 @@
     this.sprite = softSprite();
     this._buildParticles(); this._buildStars(); this._buildGlow(); this._buildRings();
     this.camera.updateMatrixWorld(true); // để projectToScreen an toàn từ frame 0 (tránh NaN)
+    this.renderStatic(); // warm-up: compile shader + upload buffer ở load-time (tránh stall frame rAF đầu)
     return this;
   };
 
@@ -485,10 +486,10 @@
 
   CosmicSphere.prototype.start = function () {
     if (this._running || this._disposed) return;
-    this._running = true; this._last = performance.now(); var self = this;
+    this._running = true; this._last = performance.now(); var self = this, _firstFrame = true;
     function loop(now) {
       if (!self._running) return;
-      var dt = Math.min((now-self._last)/1000, 0.05); self._last = now;
+      var dt = _firstFrame ? 0 : Math.min((now-self._last)/1000, 0.05); _firstFrame = false; self._last = now;
       self.update(dt); self.renderer.render(self.scene, self.camera);
       self._raf = requestAnimationFrame(loop);
     }
@@ -574,7 +575,7 @@
         suckData.push({ dx: c.x - (r.left + r.width / 2), dy: c.y - (r.top + r.height / 2), delay: Math.min(i, n - 1 - i) * SUCK_STAG });
       }
     }
-    window.addEventListener('resize', onResize); place();
+    root.style.opacity = ''; window.addEventListener('resize', onResize); place();
 
     return {
       update: function (t) {
@@ -594,14 +595,14 @@
             lt = lt < 0 ? 0 : (lt > 1 ? 1 : lt);
             var e = easeSuck(lt);
             chars[j].style.transform = 'translate(' + (d.dx * e) + 'px,' + (d.dy * e) + 'px) scale(' + (1 - 0.8 * e) + ')';
-            chars[j].style.opacity = (0.85 * (1 - e)).toFixed(3);
+            chars[j].style.opacity = (1 - e).toFixed(3);
             chars[j].style.filter = 'blur(' + (2 * e).toFixed(2) + 'px)';
           }
         }
-        if (!built.cleared && t >= T_SUCK_END) { root.innerHTML = ''; chars = []; built.cleared = true; done = true; window.removeEventListener('resize', onResize); }
+        if (!built.cleared && t >= T_SUCK_END) { root.innerHTML = ''; chars = []; root.style.opacity = '0'; built.cleared = true; done = true; window.removeEventListener('resize', onResize); }
       },
       destroy: function () {
-        if (done) return; done = true; root.innerHTML = ''; chars = [];
+        if (done) return; done = true; root.innerHTML = ''; chars = []; root.style.opacity = '0';
         root.classList.remove('cg-swapout'); window.removeEventListener('resize', onResize);
       }
     };

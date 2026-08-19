@@ -20,7 +20,27 @@
       "Bash(curl -sI http://localhost:4001/hero-sphere.js)",
       "Bash(curl -s http://localhost:4001/styles/main.css)",
       "Bash(gh --version)",
-      "Bash(gh auth *)"
+      "Bash(gh auth *)",
+      "Bash(git commit -q -m ' *)",
+      "Bash(gh repo *)",
+      "Bash(curl -s -o /dev/null -w \"/ %{http_code}\\\\n\" http://localhost:4001/)",
+      "Bash(curl -s -o /dev/null -w \"/?intro %{http_code}\\\\n\" \"http://localhost:4001/?intro\")",
+      "Bash(node --check /d/Potofilo/app/dust-layer.js)",
+      "Bash(curl -s -o /dev/null -w \"css %{http_code}\\\\n\" http://localhost:4001/styles/main.css)",
+      "Bash(curl -s \"http://localhost:4001/styles/main.css\")",
+      "Bash(git -C /d/Potofilo add app/styles/main.css app/dust-layer.js app/index.html brain/tracking/STATE.md brain/tracking/reports/0013-galaxy-boost.md brain/history/CHANGELOG.md)",
+      "Bash(git -C /d/Potofilo commit -q -m ' *)",
+      "Bash(git -C /d/Potofilo log --oneline -1)",
+      "Read(//c/Users/mrimp/Downloads/**)",
+      "Bash(git -C /d/Potofilo add brain/context/design-constitution.md CLAUDE.md brain/decisions/0005-hien-phap-thiet-ke.md)",
+      "Bash(git -C /d/Potofilo add app/dust-layer.js)",
+      "Bash(git -C /d/Potofilo commit -q -m \"fix\\(alive\\): clamp galaxy-core globalAlpha ≤1 \\(lõi mờ sai nửa chu kỳ\\)\")",
+      "Bash(node --check /d/Potofilo/app/tune.js)",
+      "Bash(curl -s -o /dev/null -w \"tune.js %{http_code}\\\\n\" http://localhost:4001/tune.js)",
+      "Bash(git add *)",
+      "Bash(curl -s http://localhost:4001/dust-layer.js)",
+      "Bash(node --check app/dust-layer.js)",
+      "Bash(node --check app/hero-sphere.js)"
     ]
   }
 }
