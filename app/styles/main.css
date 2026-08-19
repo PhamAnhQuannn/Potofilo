@@ -227,6 +227,9 @@ body.cosmic-alive .tile.cosmic-crystallized:hover {
 
 /* Trong intro: các ô ẩn (chỉ khi JS chạy intro — tắt JS vẫn hiện đủ) */
 body.cosmic-intro-running #bento .tile { opacity: 0; }
+/* Chặn click xuyên stage xuống tile/skip-link → focus-scroll → skip nhầm (bug click=skip) */
+body.cosmic-intro-running #bento,
+body.cosmic-intro-running .skip-link { pointer-events: none; }
 #bento .tile.cosmic-crystallized { opacity: 1 !important; transition: opacity 0.3s ease; }
 
 /* ============================================================
