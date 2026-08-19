@@ -972,4 +972,5 @@
   window.CosmicDust = { start: start, condense: condense, seedStars: seedStars, enterAlive: enterAlive,
     formationTargets: formationTargets, reveal: reveal, coreEnergy: coreEnergy, cloudLight: cloudLight,
     pregenTextures: pregenTextures, startPreAlive: startPreAlive };
+  if (DEBUG) window.__b4state = function () { return { revealA: revealA, alive: alive, preAlive: preAlive, coreEnergyV: coreEnergyV, B4ON: B4ON }; }; // hook test tất định (?debug)
 })();

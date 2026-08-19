@@ -1,0 +1,13 @@
+{
+  "name": "potofilo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Portfolio Phạm Anh Quân — static site (app/). Chỉ dùng npm cho test E2E.",
+  "scripts": {
+    "serve": "python -m http.server 4001 --directory app",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.48.0"
+  }
+}
